@@ -25,6 +25,10 @@ async def post_media(request: web.Request):
     buffer.close()
     return web.json_response({"key": new_name}, status=200)
 
+@router.get("/")
+async def home(request: web.Request):
+    return web.Response(text="Use /media to post")
+
 router.static("/media", "media")
 
 app.add_routes(router)
