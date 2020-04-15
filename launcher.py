@@ -30,6 +30,6 @@ router.static("/media", "media")
 app.add_routes(router)
 web.run_app(
     app,
-    host="127.0.0.1",
-    port=3333
+    host="media.idevision.net",
+    port=80
 )
