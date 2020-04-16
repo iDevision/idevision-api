@@ -10,11 +10,11 @@ router = web.RouteTableDef()
 with open("authorization.txt") as f:
     auth = f.read()
 
-@router.post("/media")
+@router.post("/post")
 async def post_media(request: web.Request):
     authorization = request.headers.get("Authorization")
     if authorization != auth:
-        return web.Response(text="403 Unauthorized", status=403)
+        return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.post()
     file = data['upload']
@@ -27,7 +27,7 @@ async def post_media(request: web.Request):
 
 @router.get("/")
 async def home(request: web.Request):
-    return web.Response(text="Use /media to post")
+    return web.Response(text="Use /post to post")
 
 router.static("/media", "media")
 
