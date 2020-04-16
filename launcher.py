@@ -13,7 +13,7 @@ with open("authorization.txt") as f:
 @router.post("/post")
 async def post_media(request: web.Request):
     authorization = request.headers.get("Authorization")
-    if authorization != auth:
+    if authorization != "Welcomer Sucks":
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.post()
