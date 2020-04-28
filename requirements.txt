@@ -1,1 +1,2 @@
+aiosqlite3
 aiohttp
