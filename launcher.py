@@ -12,10 +12,7 @@ choices = list("qwertyuiopadfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890")
 class App(web.Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.on_startup.append(self.start)
         self.last_upload = None
-
-    async def start(self):
         self.db = aiosqlite.Database("storage/data.db")
 
 app = App()
