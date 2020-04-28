@@ -18,7 +18,10 @@ app = App()
 router = web.RouteTableDef()
 
 async def get_authorization(authorization):
-    resp = await app.db.fetchrow("SELECT user FROM auths WHERE authorization = ?", authorization)
+    if authorization is None:
+        return None
+
+    resp = await app.db.fetchrow("SELECT username FROM auths WHERE authorization = ?", authorization)
     if resp is not None:
         return resp[0]
     return None
