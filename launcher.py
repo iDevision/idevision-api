@@ -27,6 +27,7 @@ async def get_authorization(authorization):
 async def post_media(request: web.Request):
     auth = await get_authorization(request.headers.get("Authorization"))
     if not auth:
+        print(auth)
         return web.Response(text="401 Unauthorized", status=401)
 
     reader = await request.multipart()
@@ -92,8 +93,8 @@ async def get_user_stats(request: web.Request):
 @router.post("/api/users/add")
 async def add_user(request: web.Request):
     auth = await get_authorization(request.headers.get("Authorization"))
-    #if not auth or auth != "tom":
-    #    return web.Response(text="401 Unauthorized", status=401)
+    if not auth or auth != "tom":
+        return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
     await app.db.execute("INSERT INTO auths VALUES (?,?)", data['username'], data['authorization'])
