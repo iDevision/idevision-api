@@ -39,7 +39,7 @@ async def post_media(request: web.Request):
     buffer = io.FileIO(f"/var/www/idevision/media/{new_name}", mode="w")
     while True:
         chunk = await data.read_chunk()
-        if chunk is None:
+        if not chunk:
             break
         buffer.write(chunk)
     buffer.close()
