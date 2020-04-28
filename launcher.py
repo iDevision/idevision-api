@@ -18,7 +18,7 @@ app = App()
 router = web.RouteTableDef()
 
 async def get_authorization(authorization):
-    resp = await app.db.fetchrow("SELECT user WHERE authorization = ?", authorization)
+    resp = await app.db.fetchrow("SELECT user FROM auths WHERE authorization = ?", authorization)
     if resp is not None:
         return resp[0]
     return None
@@ -27,7 +27,6 @@ async def get_authorization(authorization):
 async def post_media(request: web.Request):
     auth = await get_authorization(request.headers.get("Authorization"))
     if not auth:
-        print(auth)
         return web.Response(text="401 Unauthorized", status=401)
 
     reader = await request.multipart()
