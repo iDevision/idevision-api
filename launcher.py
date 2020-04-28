@@ -45,7 +45,7 @@ async def post_media(request: web.Request):
     buffer.close()
     await app.db.execute("INSERT INTO uploads VALUES (?,?,?)", new_name, auth, datetime.datetime.utcnow().timestamp())
     app.last_upload = new_name
-    return web.json_response({"url": "http://media.idevision.net/"+new_name}, status=200)
+    return web.json_response({"url": "https://media.idevision.net/"+new_name}, status=200)
 
 @router.get("/api/media/stats")
 async def get_media_stats(request: web.Request):
@@ -73,7 +73,7 @@ async def get_upload_stats(request: web.Request):
         return web.Response(text="404 Not Found", status=404)
 
     return web.json_response({
-        "url": "http://media.idevision.net/" + about[0],
+        "url": "https://media.idevision.net/" + about[0],
         "timestamp": about[2],
         "username": about[1]
     })
@@ -89,7 +89,7 @@ async def get_user_stats(request: web.Request):
     recent = await app.db.fetchval("SELECT key FROM uploads WHERE user = ? ORDER BY time", data['username'])
     return web.json_response({
         "posts": amount,
-        "most_recent": "http://media.idevision.net/" + recent
+        "most_recent": "https://media.idevision.net/" + recent
     })
 
 @router.post("/api/users/add")
