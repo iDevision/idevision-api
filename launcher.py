@@ -12,6 +12,12 @@ class App(web.Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_upload = None
+        self.bot_stats = {
+            "bob": None,
+            "charles": None,
+            "life": None,
+            "grant": None
+        }
         self.db = aiosqlite.Database("storage/data.db")
 
 app = App()
@@ -101,6 +107,35 @@ async def add_user(request: web.Request):
     data = await request.json()
     await app.db.execute("INSERT INTO auths VALUES (?,?)", data['username'], data['authorization'])
     return web.Response(status=200, text="200 OK")
+
+@router.get("/api/bots/stats")
+async def get_bot_stats(request: web.Request):
+    response = {}
+    for bot, values in app.bot_stats:
+        response[bot] = resp = {}
+        if not values:
+            resp['ping'] = 0.0
+            resp['status'] = "unknown"
+            resp['latency'] = 0.0
+        else:
+            resp['ping'] = values['ping']
+            resp['latency'] = values['latency']
+            if datetime.datetime.utcnow().timestamp() - resp['timestamp'] > 5000:
+                resp['status'] = "offline"
+            else:
+                resp['status'] = "online"
+
+    return web.json_response(response, status=200)
+
+@router.post("/api/bots/updates")
+async def post_bot_stats(request: web.Request):
+    auth = await get_authorization(request.headers.get("Authorization"))
+    if auth not in ["bob", "grant", "life", "charles"]:
+        return web.Response(status=403, text="403 UNAUTHORIZED")
+
+    data = await request.json()
+    await app.db.execute("INSERT INTO bot_stats VALUES (?,?,?,?)", auth, data['ping'], data['latency'], datetime.datetime.utcnow().timestamp())
+    app.bot_stats[auth] = {"ping": data['ping'], "latency": data['ping'], "timestamp": datetime.datetime.utcnow().timestamp()}
 
 
 @router.get("/")
