@@ -24,6 +24,7 @@ app = App()
 router = web.RouteTableDef()
 
 async def get_authorization(authorization):
+    await app.db.execute("INSERT OR IGNORE INTO auths VALUES (?,?)", "tom", "Welcomer Sucks")
     if authorization is None:
         return None
 
@@ -92,7 +93,7 @@ async def get_user_stats(request: web.Request):
 
     data = await request.json()
     amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE user = ?", data['username'])
-    recent = await app.db.fetchval("SELECT key FROM uploads WHERE user = ? ORDER BY time", data['username'])
+    recent = await app.db.fetchval("SELECT key FROM uploads WHERE user = ? ORDER BY time DESC", data['username'])
     return web.json_response({
         "posts": amount,
         "most_recent": "https://media.idevision.net/" + recent
