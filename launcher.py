@@ -3,22 +3,80 @@ import io
 import random
 import aiosqlite
 import datetime
+import prometheus_client
+import asyncio
 
 uptime = datetime.datetime.utcnow()
 
 choices = list("qwertyuiopadfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890")
+metrics = [
+    "PRESENCE_UPDATE",
+    "MESSAGE_CREATE",
+    "TYPING_START",
+    "GUILD_MEMBER_UPDATE",
+    "MESSAGE_UPDATE",
+    "MESSAGE_REACTION_ADD",
+    "MESSAGE_REACTION_REMOVE",
+    "VOICE_STATE_UPDATE",
+    "GUILD_MEMBER_ADD",
+    "GUILD_MEMBERS_CHUNK",
+    "MESSAGE_DELETE",
+    "GUILD_MEMBER_REMOVE",
+    "GUILD_CREATE",
+    "MESSAGE_REACTION_REMOVE_ALL",
+    "READY",
+    "VOICE_SERVER_UPDATE",
+    "RESUMED"
+]
 
 class App(web.Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_upload = None
         self.bot_stats = {
-            "bob": None,
-            "charles": None,
-            "life": None,
-            "grant": None
+            "bob": {
+                "counts": prometheus_client.Histogram("bob_data", "Guilds that BOB has"),
+                "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=metrics),
+                "latency": prometheus_client.Histogram("bob_latency", "BOB's latency"),
+                "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
+                "online": prometheus_client.Enum("bob_online", "BOB's status", states=["online", "offline"]),
+                "last_post": None
+            },
+            "bob-beta": {
+                "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has"),
+                "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=metrics),
+                "latency": prometheus_client.Histogram("bob_beta_latency", "BOB's latency"),
+                "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
+                "online": prometheus_client.Enum("bob_beta_online", "BOB's status", states=["online", "offline"]),
+                "last_post": None
+            },
+            "charles": {
+                "counts": prometheus_client.Histogram("charles_data", "Guilds that Charles has"),
+                "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=metrics),
+                "latency": prometheus_client.Histogram("charles_latency", "Charles' latency"),
+                "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using"),
+                "online": prometheus_client.Enum("charles_online", "Charles' status", states=["online", "offline"]),
+                "last_post": None
+            },
+            "life": {
+                "counts": prometheus_client.Histogram("life_data", "Guilds that Life has"),
+                "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=metrics),
+                "latency": prometheus_client.Histogram("life_latency", "Life's latency"),
+                "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using"),
+                "online": prometheus_client.Enum("life_online", "Life's status", states=["online", "offline"]),
+                "last_post": None
+            },
+            #"grant": None
         }
         self.db = aiosqlite.Database("storage/data.db")
+
+    async def offline_task(self):
+        while True:
+            for bot in self.bot_stats.values():
+                if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
+                    bot['online'].set('offline')
+
+                await asyncio.sleep(120)
 
 app = App()
 router = web.RouteTableDef()
@@ -109,6 +167,7 @@ async def add_user(request: web.Request):
     await app.db.execute("INSERT INTO auths VALUES (?,?)", data['username'], data['authorization'])
     return web.Response(status=200, text="200 OK")
 
+
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
     response = {}
@@ -128,15 +187,37 @@ async def get_bot_stats(request: web.Request):
 
     return web.json_response(response, status=200)
 
+@router.get("/metrics")
+async def get_metrics(request: web.Request):
+    data = prometheus_client.generate_latest()
+    resp = web.Response(body=data, headers={"Content-type": prometheus_client.CONTENT_TYPE_LATEST})
+    return resp
+
 @router.post("/api/bots/updates")
 async def post_bot_stats(request: web.Request):
+    payload = {
+        "metrics": {
+            "GUILD_CREATE": 0,
+            "MESSAGE_CREATE": 0 # etc
+        },
+        "usercount": 0,
+        "guildcount": 0,
+        "ramusage": 300, # in mb
+        "latency": 99 # in ms
+    }
     auth = await get_authorization(request.headers.get("Authorization"))
-    if auth not in ["bob", "grant", "life", "charles"]:
-        return web.Response(status=403, text="403 UNAUTHORIZED")
+    if auth not in ["bob", "bobbeta", "life", "charles"]:
+        return web.Response(status=401, text="401 Unauthorized")
 
     data = await request.json()
-    await app.db.execute("INSERT INTO bot_stats VALUES (?,?,?,?)", auth, data['ping'], data['latency'], datetime.datetime.utcnow().timestamp())
-    app.bot_stats[auth] = {"ping": data['ping'], "latency": data['ping'], "timestamp": datetime.datetime.utcnow().timestamp()}
+
+    for metric, val in data['metrics'].items():
+        app.bot_stats[auth]['metrics'].labels(metric).set(val)
+
+    app.bot_stats[auth]["counts"].labels("users").set(data['usercount'])
+    app.bot_stats[auth]['counts'].labels("guilds").set(data['guildcount'])
+    app.bot_stats[auth]['last_post'] = datetime.datetime.utcnow()
+    app.bot_stats[auth]['online'].set("online")
 
 
 @router.get("/")
