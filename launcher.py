@@ -206,7 +206,7 @@ async def post_bot_stats(request: web.Request):
     print(data)
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].state("online")
-    d['latency'].set(data['latency'])
+    d['latency'].labels(count="latency").set(data['latency'])
     return web.Response()
 
 
