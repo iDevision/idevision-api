@@ -37,7 +37,7 @@ class App(web.Application):
             "bob": {
                 "counts": prometheus_client.Gauge("bob_data", "Guilds that BOB has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['event']),
-                "latency": prometheus_client.Gauge("bob_latency", "BOB's latency"),
+                "latency": prometheus_client.Gauge("bob_latency", "BOB's latency", labelnames=["count"]),
                 "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
                 "online": prometheus_client.Enum("bob_online", "BOB's status", states=["online", "offline"]),
                 "last_post": None
@@ -46,7 +46,7 @@ class App(web.Application):
                 "counts": prometheus_client.Gauge("bob_beta_data", "Guilds that BOB has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("bob_beta_latency", "BOB's latency", labelnames=["count"]),
-                "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
+                "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using", labelnames=["count"]),
                 "online": prometheus_client.Enum("bob_beta_online", "BOB's status", states=["online", "offline"]),
                 "last_post": None
             },
@@ -54,7 +54,7 @@ class App(web.Application):
                 "counts": prometheus_client.Gauge("charles_data", "Guilds that Charles has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("charles_latency", "Charles' latency"),
-                "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using"),
+                "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using", labelnames=["count"]),
                 "online": prometheus_client.Enum("charles_online", "Charles' status", states=["online", "offline"]),
                 "last_post": None
             },
@@ -62,7 +62,7 @@ class App(web.Application):
                 "counts": prometheus_client.Gauge("life_data", "Guilds that Life has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['events']),
                 "latency": prometheus_client.Gauge("life_latency", "Life's latency"),
-                "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using"),
+                "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using", labelnames=["count"]),
                 "online": prometheus_client.Enum("life_online", "Life's status", states=["online", "offline"]),
                 "last_post": None
             },
@@ -206,6 +206,7 @@ async def post_bot_stats(request: web.Request):
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].state("online")
     d['latency'].labels(count="latency").set(data['latency'])
+    d['ram_usage'].labels(count="ram").set(data['ramusage'])
     return web.Response()
 
 
