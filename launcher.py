@@ -203,6 +203,7 @@ async def post_bot_stats(request: web.Request):
     d = app.bot_stats[auth]
     d["counts"].labels(count="users").observe(data['usercount'])
     d['counts'].labels(count="guilds").observe(data['guildcount'])
+    print(data)
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].state("online")
     return web.Response()
