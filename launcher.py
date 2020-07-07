@@ -198,7 +198,7 @@ async def post_bot_stats(request: web.Request):
     data = await request.json()
 
     for metric, val in data['metrics'].items():
-        app.bot_stats[auth]['websocket_events'].labels(event=metric).inc(val - app.bot_stats[auth]['websocket_events'].labels(event=metric)._value.get())
+        app.bot_stats[auth]['websocket_events'].labels(event=metric).inc(max(val - app.bot_stats[auth]['websocket_events'].labels(event=metric)._value.get(), 0))
 
     d = app.bot_stats[auth]
     d["counts"].labels(count="users").set(data['usercount'])
