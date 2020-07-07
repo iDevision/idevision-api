@@ -39,32 +39,36 @@ class App(web.Application):
                 "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("bob_latency", "BOB's latency", labelnames=["count"]),
                 "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
-                "online": prometheus_client.Enum("bob_online", "BOB's status", states=["online", "offline"]),
-                "last_post": None
+                "online": prometheus_client.Info("bob_online", "BOB's status"),
+                "last_post": None,
+                "raw_metrics": {x: 0 for x in metrics}
             },
             "bobbeta": {
                 "counts": prometheus_client.Gauge("bob_beta_data", "Guilds that BOB has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("bob_beta_latency", "BOB's latency", labelnames=["count"]),
                 "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using", labelnames=["count"]),
-                "online": prometheus_client.Enum("bob_beta_online", "BOB's status", states=["online", "offline"]),
-                "last_post": None
+                "online": prometheus_client.Info("bob_beta_online", "BOB's status"),
+                "last_post": None,
+                "raw_metrics": {x: 0 for x in metrics}
             },
             "charles": {
                 "counts": prometheus_client.Gauge("charles_data", "Guilds that Charles has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("charles_latency", "Charles' latency"),
                 "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using", labelnames=["count"]),
-                "online": prometheus_client.Enum("charles_online", "Charles' status", states=["online", "offline"]),
-                "last_post": None
+                "online": prometheus_client.Info("charles_online", "Charles' status"),
+                "last_post": None,
+                "raw_metrics": {x: 0 for x in metrics}
             },
             "life": {
                 "counts": prometheus_client.Gauge("life_data", "Guilds that Life has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['events']),
                 "latency": prometheus_client.Gauge("life_latency", "Life's latency"),
                 "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using", labelnames=["count"]),
-                "online": prometheus_client.Enum("life_online", "Life's status", states=["online", "offline"]),
-                "last_post": None
+                "online": prometheus_client.Info("life_online", "Life's status"),
+                "last_post": None,
+                "raw_metrics": {x: 0 for x in metrics}
             },
             #"grant": None
         }
@@ -74,7 +78,7 @@ class App(web.Application):
         while True:
             for bot in self.bot_stats.values():
                 if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
-                    bot['online'].set('offline')
+                    bot['online'].info({"state": "Offline"})
 
                 await asyncio.sleep(120)
 
@@ -171,6 +175,18 @@ async def add_user(request: web.Request):
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
     response = {}
+    for bot in ["bob", "bobbeta", "charles", "life"]:
+        d = app.bot_stats[bot]
+        response[bot] = {
+            "metrics": d['raw_metrics'],
+            "ramusage": d['ramusage']._value.get() or None,
+            "online": d['online']._value._value.get("state", "Offline") == "Online",
+            "usercount": d['counts'].labels(count="users")._value._value or None,
+            "guildcount": d['counts'].labels(count="guilds")._value._value or None,
+            "latency": d['latency'].labels(count="latency")._value._value or None,
+            "updated_at": d['last_post'].timestamp() if d['last_post'] is not None else None
+        }
+
     return web.json_response(response, status=200)
 
 @router.get("/metrics")
@@ -196,6 +212,7 @@ async def post_bot_stats(request: web.Request):
         return web.Response(status=401, text="401 Unauthorized")
 
     data = await request.json()
+    app.bot_stats[auth]['raw_metrics'] = data['metrics']
 
     for metric, val in data['metrics'].items():
         app.bot_stats[auth]['websocket_events'].labels(event=metric).inc(max(val - app.bot_stats[auth]['websocket_events'].labels(event=metric)._value.get(), 0))
@@ -204,7 +221,7 @@ async def post_bot_stats(request: web.Request):
     d["counts"].labels(count="users").set(data['usercount'])
     d['counts'].labels(count="guilds").set(data['guildcount'])
     d['last_post'] = datetime.datetime.utcnow()
-    d['online'].state("online")
+    d['online'].info({"state": "Online"})
     d['latency'].labels(count="latency").set(data['latency'])
     d['ram_usage'].labels(count="ram").set(data['ramusage'])
     return web.Response()
