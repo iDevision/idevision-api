@@ -198,12 +198,13 @@ async def post_bot_stats(request: web.Request):
     data = await request.json()
 
     for metric, val in data['metrics'].items():
-        app.bot_stats[auth]['websocket_events'].labels(event=metric).set(val)
+        app.bot_stats[auth]['websocket_events'].labels(event=metric).observe(val)
 
-    app.bot_stats[auth]["counts"].labels(count="users").set(data['usercount'])
-    app.bot_stats[auth]['counts'].labels(count="guilds").set(data['guildcount'])
-    app.bot_stats[auth]['last_post'] = datetime.datetime.utcnow()
-    app.bot_stats[auth]['online'].set("online")
+    d = app.bot_stats[auth]
+    d["counts"].labels(count="users").inc(data['usercount'] - d['counts'].labels(count="users")._value.get())
+    d['counts'].labels(count="guilds").inc(data['guildcount'] - d['counts'].labels(count="guilds")._value.get())
+    d['last_post'] = datetime.datetime.utcnow()
+    d['online'].set("online")
 
 
 @router.get("/")
