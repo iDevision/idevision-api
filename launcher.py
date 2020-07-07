@@ -36,7 +36,7 @@ class App(web.Application):
         self.bot_stats = {
             "bob": {
                 "counts": prometheus_client.Histogram("bob_data", "Guilds that BOB has"),
-                "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['events']),
+                "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("bob_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
                 "online": prometheus_client.Enum("bob_online", "BOB's status", states=["online", "offline"]),
@@ -44,7 +44,7 @@ class App(web.Application):
             },
             "bobbeta": {
                 "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has"),
-                "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['events']),
+                "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("bob_beta_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
                 "online": prometheus_client.Enum("bob_beta_online", "BOB's status", states=["online", "offline"]),
@@ -52,7 +52,7 @@ class App(web.Application):
             },
             "charles": {
                 "counts": prometheus_client.Histogram("charles_data", "Guilds that Charles has"),
-                "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['events']),
+                "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("charles_latency", "Charles' latency"),
                 "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using"),
                 "online": prometheus_client.Enum("charles_online", "Charles' status", states=["online", "offline"]),
@@ -198,7 +198,7 @@ async def post_bot_stats(request: web.Request):
     data = await request.json()
 
     for metric, val in data['metrics'].items():
-        app.bot_stats[auth]['websocket_events'].labels(count=metric).set(val)
+        app.bot_stats[auth]['websocket_events'].labels(event=metric).set(val)
 
     app.bot_stats[auth]["counts"].labels(count="users").set(data['usercount'])
     app.bot_stats[auth]['counts'].labels(count="guilds").set(data['guildcount'])
