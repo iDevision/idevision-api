@@ -35,7 +35,7 @@ class App(web.Application):
         self.last_upload = None
         self.bot_stats = {
             "bob": {
-                "counts": prometheus_client.Histogram("bob_data", "Guilds that BOB has"),
+                "counts": prometheus_client.Histogram("bob_data", "Guilds that BOB has", labelnames=['guilds', "users"]),
                 "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("bob_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
@@ -43,7 +43,7 @@ class App(web.Application):
                 "last_post": None
             },
             "bobbeta": {
-                "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has"),
+                "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has", labelnames=['guilds', "users"]),
                 "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("bob_beta_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
@@ -51,7 +51,7 @@ class App(web.Application):
                 "last_post": None
             },
             "charles": {
-                "counts": prometheus_client.Histogram("charles_data", "Guilds that Charles has"),
+                "counts": prometheus_client.Histogram("charles_data", "Guilds that Charles has", labelnames=['guilds', "users"]),
                 "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("charles_latency", "Charles' latency"),
                 "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using"),
@@ -59,7 +59,7 @@ class App(web.Application):
                 "last_post": None
             },
             "life": {
-                "counts": prometheus_client.Histogram("life_data", "Guilds that Life has"),
+                "counts": prometheus_client.Histogram("life_data", "Guilds that Life has", labelnames=['guilds', "users"]),
                 "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['events']),
                 "latency": prometheus_client.Histogram("life_latency", "Life's latency"),
                 "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using"),
