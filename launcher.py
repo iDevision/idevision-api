@@ -43,7 +43,7 @@ class App(web.Application):
                 "last_post": None
             },
             "bobbeta": {
-                "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has", labelnames=["count"]),
+                "counts": prometheus_client.Gauge("bob_beta_data", "Guilds that BOB has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Histogram("bob_beta_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
@@ -201,8 +201,8 @@ async def post_bot_stats(request: web.Request):
         app.bot_stats[auth]['websocket_events'].labels(event=metric).inc(val - app.bot_stats[auth]['websocket_events'].labels(event=metric)._value.get())
 
     d = app.bot_stats[auth]
-    d["counts"].labels(count="users").observe(data['usercount'])
-    d['counts'].labels(count="guilds").observe(data['guildcount'])
+    d["counts"].labels(count="users").set(data['usercount'])
+    d['counts'].labels(count="guilds").set(data['guildcount'])
     print(data)
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].state("online")
