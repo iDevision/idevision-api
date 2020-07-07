@@ -203,7 +203,6 @@ async def post_bot_stats(request: web.Request):
     d = app.bot_stats[auth]
     d["counts"].labels(count="users").set(data['usercount'])
     d['counts'].labels(count="guilds").set(data['guildcount'])
-    print(data)
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].state("online")
     d['latency'].labels(count="latency").set(data['latency'])
