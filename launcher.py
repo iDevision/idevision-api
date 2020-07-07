@@ -36,15 +36,15 @@ class App(web.Application):
         self.bot_stats = {
             "bob": {
                 "counts": prometheus_client.Histogram("bob_data", "Guilds that BOB has"),
-                "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=metrics),
+                "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['events']),
                 "latency": prometheus_client.Histogram("bob_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
                 "online": prometheus_client.Enum("bob_online", "BOB's status", states=["online", "offline"]),
                 "last_post": None
             },
-            "bob-beta": {
+            "bobbeta": {
                 "counts": prometheus_client.Histogram("bob_beta_data", "Guilds that BOB has"),
-                "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=metrics),
+                "websocket_events": prometheus_client.Counter("bob_beta_events", "BOB's metrics", labelnames=['events']),
                 "latency": prometheus_client.Histogram("bob_beta_latency", "BOB's latency"),
                 "ram_usage": prometheus_client.Gauge("bob_beta_ram", "How much ram BOB is using"),
                 "online": prometheus_client.Enum("bob_beta_online", "BOB's status", states=["online", "offline"]),
@@ -52,7 +52,7 @@ class App(web.Application):
             },
             "charles": {
                 "counts": prometheus_client.Histogram("charles_data", "Guilds that Charles has"),
-                "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=metrics),
+                "websocket_events": prometheus_client.Counter("charles_events", "Charles' metrics", labelnames=['events']),
                 "latency": prometheus_client.Histogram("charles_latency", "Charles' latency"),
                 "ram_usage": prometheus_client.Gauge("charles_ram", "How much ram Charles is using"),
                 "online": prometheus_client.Enum("charles_online", "Charles' status", states=["online", "offline"]),
@@ -60,7 +60,7 @@ class App(web.Application):
             },
             "life": {
                 "counts": prometheus_client.Histogram("life_data", "Guilds that Life has"),
-                "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=metrics),
+                "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['events']),
                 "latency": prometheus_client.Histogram("life_latency", "Life's latency"),
                 "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using"),
                 "online": prometheus_client.Enum("life_online", "Life's status", states=["online", "offline"]),
@@ -171,20 +171,6 @@ async def add_user(request: web.Request):
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
     response = {}
-    for bot, values in app.bot_stats:
-        response[bot] = resp = {}
-        if not values:
-            resp['ping'] = 0.0
-            resp['status'] = "unknown"
-            resp['latency'] = 0.0
-        else:
-            resp['ping'] = values['ping']
-            resp['latency'] = values['latency']
-            if datetime.datetime.utcnow().timestamp() - resp['timestamp'] > 5000:
-                resp['status'] = "offline"
-            else:
-                resp['status'] = "online"
-
     return web.json_response(response, status=200)
 
 @router.get("/metrics")
@@ -212,7 +198,7 @@ async def post_bot_stats(request: web.Request):
     data = await request.json()
 
     for metric, val in data['metrics'].items():
-        app.bot_stats[auth]['metrics'].labels(metric).set(val)
+        app.bot_stats[auth]['metrics'].labels(type=metric).set(val)
 
     app.bot_stats[auth]["counts"].labels("users").set(data['usercount'])
     app.bot_stats[auth]['counts'].labels("guilds").set(data['guildcount'])
