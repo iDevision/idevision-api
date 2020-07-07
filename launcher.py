@@ -198,11 +198,11 @@ async def post_bot_stats(request: web.Request):
     data = await request.json()
 
     for metric, val in data['metrics'].items():
-        app.bot_stats[auth]['websocket_events'].labels(event=metric).observe(val)
+        app.bot_stats[auth]['websocket_events'].labels(event=metric).set(val)
 
     d = app.bot_stats[auth]
-    d["counts"].labels(count="users").inc(data['usercount'] - d['counts'].labels(count="users")._value.get())
-    d['counts'].labels(count="guilds").inc(data['guildcount'] - d['counts'].labels(count="guilds")._value.get())
+    d["counts"].labels(count="users").observe(data['usercount'])
+    d['counts'].labels(count="guilds").observe(data['guildcount'])
     d['last_post'] = datetime.datetime.utcnow()
     d['online'].set("online")
 
