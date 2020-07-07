@@ -38,7 +38,7 @@ class App(web.Application):
                 "counts": prometheus_client.Gauge("bob_data", "Guilds that BOB has", labelnames=["count"]),
                 "websocket_events": prometheus_client.Counter("bob_events", "BOB's metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("bob_latency", "BOB's latency", labelnames=["count"]),
-                "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using"),
+                "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram BOB is using", labelnames=["count"]),
                 "online": prometheus_client.Info("bob_online", "BOB's status"),
                 "last_post": None,
                 "raw_metrics": {x: 0 for x in metrics}
@@ -179,7 +179,7 @@ async def get_bot_stats(request: web.Request):
         d = app.bot_stats[bot]
         response[bot] = {
             "metrics": d['raw_metrics'],
-            "ramusage": d['ram_usage']._value.get() or None,
+            "ramusage": d['ram_usage'].labels(count="ram")._value.get() or None,
             "online": d['online']._value.get("state", "Offline") == "Online",
             "usercount": d['counts'].labels(count="users")._value._value or None,
             "guildcount": d['counts'].labels(count="guilds")._value._value or None,
