@@ -179,7 +179,7 @@ async def get_bot_stats(request: web.Request):
         d = app.bot_stats[bot]
         response[bot] = {
             "metrics": d['raw_metrics'],
-            "ramusage": d['ramusage']._value.get() or None,
+            "ramusage": d['ram_usage']._value.get() or None,
             "online": d['online']._value._value.get("state", "Offline") == "Online",
             "usercount": d['counts'].labels(count="users")._value._value or None,
             "guildcount": d['counts'].labels(count="guilds")._value._value or None,
