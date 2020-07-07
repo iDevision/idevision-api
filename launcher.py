@@ -204,7 +204,8 @@ async def post_bot_stats(request: web.Request):
     d["counts"].labels(count="users").observe(data['usercount'])
     d['counts'].labels(count="guilds").observe(data['guildcount'])
     d['last_post'] = datetime.datetime.utcnow()
-    d['online'].set("online")
+    d['online'].state("online")
+    return web.Response()
 
 
 @router.get("/")
