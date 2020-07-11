@@ -134,7 +134,7 @@ async def get_upload_stats(request: web.Request):
         return web.Response(text="400 Bad Request", status=400)
 
     auth = await get_authorization(request.headers.get("Authorization"))
-    if not auth or auth != "tom":
+    if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
     about = await app.db.fetchrow("SELECT * FROM uploads WHERE key = ?", data['key'])
@@ -150,7 +150,7 @@ async def get_upload_stats(request: web.Request):
 @router.get("/api/media/stats/user")
 async def get_user_stats(request: web.Request):
     auth = await get_authorization(request.headers.get("Authorization"))
-    if not auth or auth != "tom":
+    if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
