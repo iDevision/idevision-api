@@ -1,3 +1,20 @@
-create table if not exists uploads (key text, user text, time integer);
-create table if not exists auths (username text primary key, authorization text);
-create table if not exists bot_data (botname text, ping integer, latency integer, timestamp integer);
+create table uploads
+(
+    key      text,
+    username text references auths (username) ON DELETE CASCADE,
+    time     timestamp
+);
+create table auths
+(
+    username       text primary key,
+    auth_key       text,
+    allowed_routes text [],
+    active         boolean default true not null
+);
+create table bot_data
+(
+    botname   text references auths (username),
+    ping      integer,
+    latency   integer,
+    timestamp integer
+);
