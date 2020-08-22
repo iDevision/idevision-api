@@ -299,6 +299,7 @@ async def deauth_user(request: web.Request):
     usr = data.get("username")
 
     await app.db.fetchrow("UPDATE auths SET active = false WHERE username = $1", usr)
+    return web.Response()
 
 @router.post("/api/users/auth")
 async def auth_user(request: web.Request):
