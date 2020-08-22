@@ -247,6 +247,9 @@ async def get_user_stats(request: web.Request):
     data = await request.json()
     amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1", data['username'])
     recent = await app.db.fetchval("SELECT key FROM uploads WHERE username = $1 ORDER BY time DESC", data['username'])
+    if not amount and not recent:
+        return web.Response(status=400, reason="User not found/no entries")
+
     return web.json_response({
         "posts": amount,
         "most_recent": "https://cdn.idevision.net/" + recent
@@ -298,7 +301,7 @@ async def deauth_user(request: web.Request):
     await app.db.fetchrow("UPDATE auths SET active = false WHERE username = $1", usr)
 
 @router.post("/api/users/auth")
-async def deauth_user(request: web.Request):
+async def auth_user(request: web.Request):
     auth, routes = await get_authorization(request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
@@ -371,11 +374,6 @@ async def post_bot_stats(request: web.Request):
 async def home(request: web.Request):
     return web.Response(body=index, content_type="text/html")
 
-x = []
-for v in router:
-    x.append(v.path)
-
-print(x)
 
 router.static("/vendor", "vendor")
 router.static("/images", "images")
