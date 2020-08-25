@@ -251,8 +251,8 @@ async def get_user_stats(request: web.Request):
         return web.Response(status=400, reason="User not found/no entries")
 
     return web.json_response({
-        "posts": amount,
-        "most_recent": "https://cdn.idevision.net/" + recent
+        "upload_count": amount,
+        "last_upload": "https://cdn.idevision.net/" + recent
     })
 
 @router.post("/api/users/manage")

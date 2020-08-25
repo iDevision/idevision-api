@@ -18,3 +18,9 @@ create table bot_data
     latency   integer,
     timestamp integer
 );
+create table tinyurls
+(
+    username text references auths (username) ON DELETE CASCADE,
+    link     text,
+    url      text
+)
