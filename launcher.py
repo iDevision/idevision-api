@@ -359,7 +359,6 @@ async def post_bot_stats(request: web.Request):
     app.bot_stats[auth]['raw_metrics'] = data['metrics']
 
     for metric, val in data['metrics'].items():
-        print(metric)
         app.bot_stats[auth]['websocket_events'].labels(event=metric).inc(max(val - app.bot_stats[auth]['websocket_events'].labels(event=metric)._value.get(), 0))
 
     d = app.bot_stats[auth]
