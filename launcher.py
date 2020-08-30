@@ -84,7 +84,7 @@ class App(web.Application):
         self.on_startup.append(self.async_init)
 
     async def async_init(self, _):
-        self.db = await asyncpg.create_pool("postgresql://tom:tom@64.227.54.240:5432/idevision")
+        self.db = await asyncpg.create_pool("postgresql://tom:tom@207.244.228.96:5432/idevision")
 
     async def offline_task(self):
         while True:
