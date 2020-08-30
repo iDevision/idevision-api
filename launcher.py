@@ -72,7 +72,7 @@ class App(web.Application):
             },
             "life": {
                 "counts": prometheus_client.Gauge("life_data", "Guilds that Life has", labelnames=["count"]),
-                "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['events']),
+                "websocket_events": prometheus_client.Counter("life_events", "Life's metrics", labelnames=['event']),
                 "latency": prometheus_client.Gauge("life_latency", "Life's latency", labelnames=["count"]),
                 "ram_usage": prometheus_client.Gauge("life_ram", "How much ram Life is using", labelnames=["count"]),
                 "online": prometheus_client.Info("life_online", "Life's status"),
