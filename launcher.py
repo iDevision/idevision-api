@@ -6,8 +6,10 @@ import datetime
 import prometheus_client
 import asyncio
 import os
+import sys
 
 uptime = datetime.datetime.utcnow()
+test = "--unittest" in sys.argv
 
 choices = list("qwertyuiopadfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890")
 metrics = [
@@ -84,7 +86,10 @@ class App(web.Application):
         self.on_startup.append(self.async_init)
 
     async def async_init(self, _):
-        self.db = await asyncpg.create_pool("postgresql://tom:tom@207.244.228.96:5432/idevision")
+        if test:
+            pass
+        else:
+            self.db = await asyncpg.create_pool("postgresql://tom:tom@207.244.228.96:5432/idevision")
 
     async def offline_task(self):
         while True:
@@ -98,6 +103,9 @@ app = App()
 router = web.RouteTableDef()
 
 async def get_authorization(authorization):
+    if test:
+        return "iamtomahawkx", ["*"]
+
     resp = await app.db.fetchrow("SELECT username, allowed_routes FROM auths WHERE auth_key = $1 and active = true", authorization)
     if resp is not None:
         return resp['username'], resp['allowed_routes']
@@ -147,6 +155,9 @@ async def delete_image(request: web.Request):
     if not route_allowed(routes, "api/media/images"):
         return web.Response(text="401 Unauthorized", status=401)
 
+    if test:
+        return web.Response(status=204)
+
     if not await app.db.fetchrow("DELETE FROM uploads WHERE key = $1 AND username = $2 RETURNING *;", request.match_info.get("image")):
         return web.Response(text="401 Unauthorized", status=401)
 
@@ -164,6 +175,9 @@ async def purge_user(request: web.Request):
 
     data = await request.json()
     usr = data.get("username")
+    if test:
+        return web.Response(status=204)
+
     data = await app.db.fetch("DELETE FROM uploads WHERE username = $1 RETURNING *;", usr)
     if not data:
         return web.Response(status=400, reason="User not found/no images to delete")
@@ -175,7 +189,11 @@ async def purge_user(request: web.Request):
 
 @router.get("/api/media/stats")
 async def get_media_stats(request: web.Request):
-    amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads;")
+    if test:
+        amount = 10
+    else:
+        amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads;")
+
     return web.json_response({
         "upload_count": amount,
         "last_upload": app.last_upload
@@ -189,6 +207,9 @@ async def get_media_list(request: web.Request):
 
     if not route_allowed(routes, "api/media/list"):
         return web.Response(text="401 Unauthorized", status=401)
+
+    if test:
+        return web.json_response({"iamtomahawkx": ["1.png", "2.png"]})
 
     values = await app.db.fetch("SELECT * FROM uploads")
     resp = {}
@@ -210,6 +231,8 @@ async def get_media_list(request: web.Request):
         return web.Response(text="401 Unauthorized", status=401)
 
     usr = request.match_info.get("user", auth)
+    if test:
+        return web.json_response(["1.png", "2.jpg"])
 
     values = await app.db.fetch("SELECT * FROM uploads WHERE username = $1;", usr)
     return web.json_response([rec['key'] for rec in values])
@@ -224,6 +247,12 @@ async def get_upload_stats(request: web.Request):
         return web.Response(text="401 Unauthorized", status=401)
 
     key = request.match_info.get("key")
+    if test:
+        return web.json_response({
+            "url": "https://cdn.idevision.net/abc.png",
+            "timestamp": datetime.datetime.utcnow().timestamp(),
+            "username": "iamtomahawkx"
+        })
 
     about = await app.db.fetchrow("SELECT * FROM uploads WHERE key = $1", key)
     if not about:
@@ -231,7 +260,7 @@ async def get_upload_stats(request: web.Request):
 
     return web.json_response({
         "url": "https://cdn.idevision.net/" + about[0],
-        "timestamp": about[2],
+        "timestamp": about[2].timestamp(),
         "username": about[1]
     })
 
@@ -245,6 +274,12 @@ async def get_user_stats(request: web.Request):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
+    if test:
+        return web.json_response({
+            "upload_count": 0,
+            "last_upload": "https://cdn.idevision.net/abc.png"
+        })
+
     amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1", data['username'])
     recent = await app.db.fetchval("SELECT key FROM uploads WHERE username = $1 ORDER BY time DESC", data['username'])
     if not amount and not recent:
@@ -266,8 +301,11 @@ async def add_user(request: web.Request):
 
     data = await request.json()
     routes = [x.strip("/") for x in data.get("routes", [])] or DEFAULT_ROUTES
+    if test:
+        return web.Response(status=204)
+
     await app.db.execute("INSERT INTO auths VALUES ($1, $2, $3, true)", data['username'], data['authorization'], routes)
-    return web.Response(status=200, text="200 OK")
+    return web.Response(status=204)
 
 @router.delete("/api/users/manage")
 async def remove_user(request: web.Request):
@@ -280,11 +318,15 @@ async def remove_user(request: web.Request):
 
     data = await request.json()
     usr = data.get("username")
+    if test:
+        return web.Response(status=204)
+
     data = await app.db.fetch("SELECT key FROM uploads WHERE username = $1", usr)
     for row in data:
         os.remove("/var/www/idevision/media/" + row['key'])
 
     await app.db.execute("DELETE FROM auths WHERE username = $1", usr)
+    return web.Response(status=204)
 
 @router.post("/api/users/deauth")
 async def deauth_user(request: web.Request):
@@ -298,8 +340,11 @@ async def deauth_user(request: web.Request):
     data = await request.json()
     usr = data.get("username")
 
+    if test:
+        return web.Response(status=204)
+
     await app.db.fetchrow("UPDATE auths SET active = false WHERE username = $1", usr)
-    return web.Response()
+    return web.Response(status=204)
 
 @router.post("/api/users/auth")
 async def auth_user(request: web.Request):
@@ -312,9 +357,11 @@ async def auth_user(request: web.Request):
 
     data = await request.json()
     usr = data.get("username")
+    if test:
+        return web.Response(status=204)
 
     await app.db.fetchrow("UPDATE auths SET active = true WHERE username = $1", usr)
-    return web.Response()
+    return web.Response(status=204)
 
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
@@ -385,8 +432,10 @@ with open("index.html") as f:
     index = f.read()
 
 app.add_routes(router)
-web.run_app(
-    app,
-    host="127.0.0.1",
-    port=8333
-)
+
+if __name__ == "__main__":
+    web.run_app(
+        app,
+        host="127.0.0.1",
+        port=8333
+    )
