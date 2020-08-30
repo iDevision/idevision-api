@@ -422,6 +422,7 @@ async def post_bot_stats(request: web.Request):
 async def git_checks(request: web.Request):
     data = await request.json()
     print(data)
+    return web.Response()
 
 @router.get("/")
 async def home(request: web.Request):
