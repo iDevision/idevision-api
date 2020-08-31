@@ -426,6 +426,7 @@ async def git_checks(request: web.Request):
         import subprocess
         v = subprocess.run(["/usr/bin/bash", "-c", " 'at now'"], input="git pull origin master && systemctl restart idevision")
         print(v.returncode, v.stdout.read())
+        print("restarting...")
 
     return web.Response()
 
