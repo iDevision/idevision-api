@@ -413,6 +413,10 @@ async def git_checks(request: web.Request):
 async def home(request: web.Request):
     return web.Response(body=index, content_type="text/html")
 
+@router.get("/home")
+async def home(request: web.Request):
+    return web.Response(body=homepage, content_type="text/html")
+
 
 router.static("/vendor", "vendor")
 router.static("/images", "images")
@@ -421,6 +425,9 @@ router.static("/css", "css")
 
 with open("index.html") as f:
     index = f.read()
+
+with open("homepage.html") as f:
+    homepage = f.read()
 
 app.add_routes(router)
 
