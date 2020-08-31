@@ -422,7 +422,7 @@ async def post_bot_stats(request: web.Request):
 async def git_checks(request: web.Request):
     data = await request.json()
 
-    if data['action'] == "completed" and data['check_suite']['conclusion'] == "success":
+    if data['action'] == "completed" and data['check_run']['conclusion'] == "success":
         import subprocess
         v = subprocess.run("at now", input="git pull origin master && systemctl restart idevision")
         print(v.returncode, v.stdout.read())
