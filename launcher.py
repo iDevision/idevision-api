@@ -423,7 +423,7 @@ async def home_urls(request: web.Request):
     link3 = data['link3'], data['link2_name']
     link4 = data['link4'], data['link2_name']
 
-    await app.db.execute("""INSERT INTO homepage_urls VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    await app.db.execute("""INSERT INTO homepages VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (username) DO UPDATE SET 
     link1 = $2, link1_name = $3,
     link2 = $4, link2_name = $5,
@@ -437,7 +437,7 @@ async def home_urls(request: web.Request):
 @aiohttp_jinja2.template("homepage.html")
 async def home(request: web.Request):
     usr = request.query.get("user", "Unknown")
-    row = await app.db.fetchrow("SELECT * FROM homepage_urls WHERE username = $1", usr)
+    row = await app.db.fetchrow("SELECT * FROM homepages WHERE username = $1", usr)
     if not row:
         return {
             "name": usr,
