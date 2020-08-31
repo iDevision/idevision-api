@@ -422,6 +422,7 @@ router.static("/vendor", "vendor")
 router.static("/images", "images")
 router.static("/fonts", "fonts")
 router.static("/css", "css")
+router.static("/js", "js")
 
 with open("index.html") as f:
     index = f.read()
