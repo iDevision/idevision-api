@@ -426,7 +426,7 @@ async def home_urls(request: web.Request):
     link3 = data['link3'], data['link3_name']
     link4 = data['link4'], data['link4_name']
 
-    await app.db.execute("""INSERT INTO homepages VALUES ($1, $10 $2, $3, $4, $5, $6, $7, $8, $9)
+    await app.db.execute("""INSERT INTO homepages VALUES ($1, $10, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (username) DO UPDATE SET 
     display_name = $10,
     link1 = $2, link1_name = $3,
