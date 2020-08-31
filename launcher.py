@@ -394,6 +394,7 @@ async def post_bot_stats(request: web.Request):
     d['online'].labels(bot=auth).info({"state": "Online"})
     d['latency'].labels(count="latency", bot=auth).set(data['latency'])
     d['ram_usage'].labels(count="ram", bot=auth).set(data['ramusage'])
+
     return web.Response()
 
 
