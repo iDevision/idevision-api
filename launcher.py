@@ -421,7 +421,10 @@ async def post_bot_stats(request: web.Request):
 @router.post("/api/git/checks")
 async def git_checks(request: web.Request):
     data = await request.json()
-    print(data)
+    if data['action'] == "completed" and data['check_suite']['conclusion'] == "success":
+        import subprocess
+        subprocess.run("at now", input="git pull origin master && systemctl restart idevision")
+
     return web.Response()
 
 @router.get("/")
