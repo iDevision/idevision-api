@@ -26,7 +26,7 @@ create table tinyurls
 );
 create table homepages
 (
-    username     text primary key references auths (username) ON DELETE CASCADE,
+    username     text primary key,
     display_name text,
     link1        text default 'https://github.com',
     link1_name   text default 'Github',
