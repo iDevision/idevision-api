@@ -480,6 +480,7 @@ with open("index.html") as f:
 with open("homepage.html") as f:
     homepage = f.read()
 
+aiohttp_jinja2.setup(app)
 app.add_routes(router)
 
 if __name__ == "__main__":
