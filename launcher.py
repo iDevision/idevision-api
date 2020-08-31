@@ -45,11 +45,11 @@ class App(web.Application):
         super().__init__(*args, **kwargs)
         self.last_upload = None
         self.prometheus = {
-            "counts": prometheus_client.Gauge("bob_data", "Guilds that the bot has", labelnames=["count", "bot"]),
-            "websocket_events": prometheus_client.Counter("bob_events", "bot's metrics", labelnames=['event', "bot"]),
-            "latency": prometheus_client.Gauge("bob_latency", "bot's latency", labelnames=["count", "bot"]),
-            "ram_usage": prometheus_client.Gauge("bob_ram", "How much ram the bot is using", labelnames=["count", "bot"]),
-            "online": prometheus_client.Info("bob_online", "the bot's status", labelnames=["bot"]),
+            "counts": prometheus_client.Gauge("bot_data", "Guilds that the bot has", labelnames=["count", "bot"]),
+            "websocket_events": prometheus_client.Counter("bot_events", "bot's metrics", labelnames=['event', "bot"]),
+            "latency": prometheus_client.Gauge("bot_latency", "bot's latency", labelnames=["count", "bot"]),
+            "ram_usage": prometheus_client.Gauge("bot_ram", "How much ram the bot is using", labelnames=["count", "bot"]),
+            "online": prometheus_client.Info("bot_online", "the bot's status", labelnames=["bot"]),
         }
         self.bot_stats = {}
         self.on_startup.append(self.async_init)
