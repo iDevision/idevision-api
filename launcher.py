@@ -453,7 +453,7 @@ async def home(request: web.Request):
         }
 
     return {
-        "name": usr,
+        "username": usr,
         "link1": row['link1'],
         "link2": row['link2'],
         "link3": row['link3'],
