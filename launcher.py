@@ -5,6 +5,7 @@ import asyncpg
 import datetime
 import prometheus_client
 import aiohttp_jinja2
+import jinja2
 import asyncio
 import os
 import sys
@@ -480,7 +481,7 @@ with open("index.html") as f:
 with open("homepage.html") as f:
     homepage = f.read()
 
-aiohttp_jinja2.setup(app)
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./'))
 app.add_routes(router)
 
 if __name__ == "__main__":
