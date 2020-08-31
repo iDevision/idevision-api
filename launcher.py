@@ -421,8 +421,6 @@ async def post_bot_stats(request: web.Request):
 @router.post("/api/git/checks")
 async def git_checks(request: web.Request):
     data = await request.json()
-    if data['secret'] != "092314gh93-j30@)(@n232(#*b23nt3g020rnwjsdjfwne0@)":
-        return web.Response(status=401)
 
     if data['action'] == "completed" and data['check_suite']['conclusion'] == "success":
         import subprocess
