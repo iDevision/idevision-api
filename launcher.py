@@ -441,7 +441,7 @@ async def home(request: web.Request):
     row = await app.db.fetchrow("SELECT * FROM homepages WHERE username = $1", usr)
     if not row:
         return {
-            "name": usr,
+            "username": usr,
             "link1": "https://duckduckgo.com",
             "link2": "https://duckduckgo.com",
             "link3": "https://duckduckgo.com",
