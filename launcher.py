@@ -4,6 +4,7 @@ import random
 import asyncpg
 import datetime
 import prometheus_client
+import aiohttp_jinja2
 import asyncio
 import os
 import sys
@@ -409,13 +410,62 @@ async def git_checks(request: web.Request):
 
     return web.Response()
 
+@router.post("/api/home/urls")
+async def home_urls(request: web.Request):
+    auth, _ = await get_authorization(request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    data = await request.json()
+
+    link1 = data['link1'], data['link1_name']
+    link2 = data['link2'], data['link2_name']
+    link3 = data['link3'], data['link2_name']
+    link4 = data['link4'], data['link2_name']
+
+    await app.db.execute("""INSERT INTO homepage_urls VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (username) DO UPDATE SET 
+    link1 = $2, link1_name = $3,
+    link2 = $4, link2_name = $5,
+    link3 = $6, link3_name = $7,
+    link4 = $8, link4_name = $9
+    """, auth, *link1, *link2, *link3, *link4)
+
+    return web.Response(status=204)
+
+@router.get("/homepage")
+@aiohttp_jinja2.template("homepage.html")
+async def home(request: web.Request):
+    usr = request.query.get("user", "Unknown")
+    row = await app.db.fetchrow("SELECT * FROM homepage_urls WHERE username = $1", usr)
+    if not row:
+        return {
+            "name": usr,
+            "link1": "https://duckduckgo.com",
+            "link2": "https://duckduckgo.com",
+            "link3": "https://duckduckgo.com",
+            "link4": "https://duckduckgo.com",
+            "link1name": "DuckDuckGo",
+            "link2name": "DuckDuckGo",
+            "link3name": "DuckDuckGo",
+            "link4name": "DuckDuckGo",
+        }
+
+    return {
+        "name": usr,
+        "link1": row['link1'],
+        "link2": row['link2'],
+        "link3": row['link3'],
+        "link4": row['link4'],
+        "link1name": row['link1_name'],
+        "link2name": row['link2_name'],
+        "link3name": row['link3_name'],
+        "link4name": row['link4_name'],
+    }
+
 @router.get("/")
 async def home(request: web.Request):
     return web.Response(body=index, content_type="text/html")
-
-@router.get("/home")
-async def home(request: web.Request):
-    return web.Response(body=homepage, content_type="text/html")
 
 
 router.static("/vendor", "vendor")

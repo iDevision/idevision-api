@@ -25,7 +25,7 @@ const postLoad = () => {
         } else {
             greetTime = 'Evening';
         }
-        docTitle.innerHTML = `Good ${greetTime}, Tom`;
+        docTitle.innerHTML = `Good ${greetTime}, ${username}`;
     }
 
     const delegateSubmission = (event) => {

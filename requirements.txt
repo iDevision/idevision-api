@@ -1,3 +1,4 @@
 asyncpg
 aiohttp
 prometheus_client
+aiohttp_jinja2

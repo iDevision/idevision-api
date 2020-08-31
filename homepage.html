@@ -1,28 +1,32 @@
 <!DOCTYPE HTML>
 <html>
-  <head>
+<head>
     <meta charset='utf-8'>
     <title>Hello, Tom</title>
+    <link rel="icon" type="image/png" href="images/icons/favicon.ico"/>
     <link rel='stylesheet' href='css/style.css'>
+    <script>
+        const username = "{{name}}";
+    </script>
     <script src='js/script.js'></script>
-  </head>
-  <body>
-    <div id='container'>
-      <div id='content'>
+</head>
+<body>
+<div id='container'>
+    <div id='content'>
         <h1 class='clock'>00:00:00</h1>
         <input type='text' class='searchField' placeholder='Search with DuckDuckGo' autofocus>
         <button type='submit' onclick='transferToDDG();'>Go!</button>
         <table class='quickLinks'>
-          <tr>
-            <td><a class='aLeft' target='https://github.com/' href='https://github.com/'>Github</a></td>
-            <td><a class='aRight' target='_blank' href='https://metrics.idevision.net'>Idevision</a></td>
-          </tr>
-          <tr>
-            <td><a class='aLeft' target='_blank' href='https://youtube.com'>youtube</a></td>
-            <td><a class='aRight' target='_blank' href='https://twitch.tv'>Twitch</a></td>
-          </tr>
+            <tr>
+                <td><a class='aLeft' target='_blank' href='{{link1}}'>{{link1name}}</a></td>
+                <td><a class='aRight' target='_blank' href='{{link2}}'>{{link2name}}}</a></td>
+            </tr>
+            <tr>
+                <td><a class='aLeft' target='_blank' href='{{link3}}'>{{link3name}}</a></td>
+                <td><a class='aRight' target='_blank' href='{{link4}}'>{{link4name}}</a></td>
+            </tr>
         </table>
-      </div>
     </div>
-  </body>
+</div>
+</body>
 </html>
