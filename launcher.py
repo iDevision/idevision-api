@@ -115,6 +115,9 @@ async def post_media(request: web.Request):
     buffer.close()
     await app.db.execute("INSERT INTO uploads VALUES ($1,$2,$3)", new_name, auth, datetime.datetime.utcnow())
     app.last_upload = new_name
+    if auth == "random" or auth == "life":
+        return web.json_response({"url": "https://cdn.idevision.net/tLu.png", "sike_heres_the_real_url": "https://cdn.idevision.net/"+new_name})
+
     return web.json_response({"url": "https://cdn.idevision.net/"+new_name}, status=200)
 
 @router.delete("/api/media/images/{image}")
