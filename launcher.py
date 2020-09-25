@@ -132,7 +132,16 @@ async def delete_image(request: web.Request):
     if test:
         return web.Response(status=204)
 
-    if not await app.db.fetchrow("DELETE FROM uploads WHERE key = $1 AND username = $2 RETURNING *;", request.match_info.get("image")):
+    if "*" in routes:
+        coro = app.db.fetchrow("DELETE FROM uploads WHERE key = $1 RETURNING *;", request.match_info.get("image"))
+
+    else:
+        coro = app.db.fetchrow("DELETE FROM uploads WHERE key = $1 AND username = $2 RETURNING *;", request.match_info.get("image"), auth)
+
+    if not await coro:
+        if "*" in routes:
+            return web.Response(text="404 NOT FOUND", status=404)
+
         return web.Response(text="401 Unauthorized", status=401)
 
     os.remove("/var/www/idevision/media/"+request.match_info.get("image"))
