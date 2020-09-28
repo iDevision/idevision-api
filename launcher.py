@@ -349,8 +349,7 @@ async def auth_user(request: web.Request):
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
     response = {}
-    for bot, d in app.bot_stats:
-        d = app.bot_stats[bot]
+    for bot, d in app.bot_stats.items():
         response[bot] = {
             "metrics": d['metrics'],
             "ramusage": d['ram_usage'],
