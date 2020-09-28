@@ -64,9 +64,9 @@ class App(web.Application):
 
     async def offline_task(self):
         while True:
-            for bot in self.bot_stats.values():
+            for bname, bot in self.bot_stats.items():
                 if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
-                    bot['online'].info({"state": "Offline"})
+                    self.prometheus['online'].labels(bot=bname).info({"state": "Offline"})
 
                 await asyncio.sleep(120)
 
@@ -350,6 +350,7 @@ async def auth_user(request: web.Request):
 async def get_bot_stats(request: web.Request):
     response = {}
     for bot, d in app.bot_stats.items():
+        print(d)
         response[bot] = {
             "metrics": d['metrics'],
             "ramusage": d['ram_usage'],
@@ -408,7 +409,7 @@ async def post_bot_stats(request: web.Request):
     d['latency'].labels(count="latency", bot=auth).set(data['latency'])
     d['ram_usage'].labels(count="ram", bot=auth).set(data['ramusage'])
 
-    return web.Response()
+    return web.Response(status=204)
 
 
 @router.post("/api/git/checks")
