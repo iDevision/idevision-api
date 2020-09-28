@@ -396,7 +396,7 @@ async def post_bot_stats(request: web.Request):
         "online": True,
         "user_count": data.get("usercount", 0),
         "guild_count": data.get("guildcount", 0)
-        },
+        }
 
     for metric, val in data['metrics'].items():
         app.prometheus['websocket_events'].labels(event=metric, bot=auth).inc(
