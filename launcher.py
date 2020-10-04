@@ -104,7 +104,7 @@ async def post_media(request: web.Request):
     reader = await request.multipart()
     data = await reader.next()
     extension = data.filename.split(".").pop()
-    new_name = "".join([random.choice(choices) for _ in range(3)]) + f".{extension}"
+    new_name = "".join([random.choice(choices) for _ in range(8)]) + f".{extension}"
     buffer = io.FileIO(f"/var/www/idevision/media/{new_name}", mode="w")
     while True:
         chunk = await data.read_chunk()
