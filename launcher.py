@@ -419,7 +419,7 @@ async def git_checks(request: web.Request):
     if data['action'] == "completed" and data['check_run']['conclusion'] == "success":
         import subprocess
         subprocess.run(["/usr/bin/bash", "-c", "at now"], input=b"git pull origin master && systemctl --user restart idevision")
-        print("restarting....")
+        print(f"restart from {request.headers['x-real-ip']}", file=sys.stderr)
 
     return web.Response()
 
