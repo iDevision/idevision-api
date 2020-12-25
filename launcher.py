@@ -120,6 +120,35 @@ async def post_media(request: web.Request):
 
     return web.json_response({"url": "https://cdn.idevision.net/"+new_name}, status=200)
 
+@router.post("/api/media/container/upload")
+async def usercontent_upload(request: web.Request):
+    auth, routes = await get_authorization(request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not route_allowed(routes, "api/media/container"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if test:
+        return web.Response(status=204)
+
+    filename = request.headers.get("File-Name", None)
+    if not filename:
+        return web.Response(text="400 Missing File-Name header", status=400)
+
+    if "/" in filename:
+        return web.Response(text="400 Bad filename", status=400)
+
+    if not os.path.exists(f"/var/www/idevision/containers/{auth}"):
+        os.makedirs(f"/var/www/idevision/containers/{auth}")
+
+    pth = os.path.join("/var/www/idevision/containers", auth, filename)
+    with open(pth, "w") as f:
+        f.write(await request.text())
+
+    return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
+
+
 @router.delete("/api/media/images/{image}")
 async def delete_image(request: web.Request):
     auth, routes = await get_authorization(request.headers.get("Authorization"))
