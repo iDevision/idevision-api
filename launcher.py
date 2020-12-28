@@ -143,8 +143,14 @@ async def usercontent_upload(request: web.Request):
         os.makedirs(f"/var/www/idevision/containers/{auth}")
 
     pth = os.path.join("/var/www/idevision/containers", auth, filename)
-    with open(pth, "w") as f:
-        f.write(await request.text())
+    with open(pth, "wb") as f:
+        while True:
+            data = await request.content.read(120)
+            if not data:
+                break
+
+            f.write(data)
+
 
     return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
 
