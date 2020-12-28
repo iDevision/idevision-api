@@ -132,25 +132,39 @@ async def usercontent_upload(request: web.Request):
     if test:
         return web.Response(status=204)
 
-    filename = request.headers.get("File-Name", None)
-    if not filename:
-        return web.Response(text="400 Missing File-Name header", status=400)
-
-    if "/" in filename:
-        return web.Response(text="400 Bad filename", status=400)
-
     if not os.path.exists(f"/var/www/idevision/containers/{auth}"):
         os.makedirs(f"/var/www/idevision/containers/{auth}")
 
-    pth = os.path.join("/var/www/idevision/containers", auth, filename)
-    with open(pth, "wb") as f:
-        while True:
-            data = await request.content.read(120)
-            if not data:
-                break
+    if "multipart" in request.content_type:
+        d = await request.multipart()
+        data = await d.next()
+        filename = data.filename
+        if "/" in filename:
+            return web.Response(text="400 Bad filename", status=400)
 
-            f.write(data)
+        pth = os.path.join("/var/www/idevision/containers", auth, filename)
+        with open(pth, "wb") as f:
+            while True:
+                chunk = await data.read_chunk()
+                if not chunk:
+                    break
+                f.write(chunk)
+    else:
+        filename = request.headers.get("File-Name", None)
+        if not filename:
+            return web.Response(text="400 Missing File-Name header, and no multipart filename available", status=400)
 
+        if "/" in filename:
+            return web.Response(text="400 Bad filename", status=400)
+
+        pth = os.path.join("/var/www/idevision/containers", auth, filename)
+        with open(pth, "wb") as f:
+            while True:
+                data = await request.content.read(120)
+                if not data:
+                    break
+
+                f.write(data)
 
     return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
 
