@@ -2,3 +2,7 @@ asyncpg
 aiohttp
 prometheus_client
 aiohttp_jinja2
+
+discord.py
+twitchio
+wavelink

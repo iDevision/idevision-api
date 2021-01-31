@@ -9,6 +9,11 @@ import jinja2
 import asyncio
 import os
 import sys
+import subprocess
+
+subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
+
+from public.endpoints import router as _api_router
 
 uptime = datetime.datetime.utcnow()
 test = "--unittest" in sys.argv
@@ -60,7 +65,7 @@ class App(web.Application):
         if test:
             pass
         else:
-            self.db = await asyncpg.create_pool("postgresql://tom:tom@207.244.228.96:5432/idevision")
+            self.db = await asyncpg.create_pool("postgresql://tom:tom@127.0.0.1:5432/idevision")
 
     async def offline_task(self):
         while True:
@@ -71,6 +76,7 @@ class App(web.Application):
                 await asyncio.sleep(120)
 
 app = App()
+app.add_routes(_api_router)
 router = web.RouteTableDef()
 
 async def get_authorization(authorization):
