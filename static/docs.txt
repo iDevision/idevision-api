@@ -1,0 +1,36 @@
+Because i'm a lazy fuck, you get plaintext docs.
+
+GET /api/public/rtfs
+
+Required Query parameters
+---------------------------
+- query : The actual query
+- library : The module to find source for. One of twitchio or discord.py
+
+Returns
+--------
+Response 200
+```json
+{
+    "nodes": {"Node name": "URL to source"},
+    "query_time": "1.0"
+}
+```
+
+GET /api/public/rtfm
+
+Required Query parameters
+---------------------------
+- query : The actual query
+- location : The location of the documentation. This should look something like https://discordpy.readthedocs.io/en/latest
+- show-labels : a boolean. When false, labels will not be returned in the results
+- label-labels : a boolean. When true, labels will have `label:` prepended to them. Does nothing when show-labels is false
+
+Returns
+--------
+Response 200
+```json
+{
+    "nodes": {"Node name": "URL of the documentation"},
+    "query_time": "1.0"
+}

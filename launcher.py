@@ -79,6 +79,12 @@ app = App()
 app.add_routes(_api_router)
 router = web.RouteTableDef()
 
+router.static("/static", "./static")
+
+@router.get("/docs")
+async def _docs(req):
+    raise web.HTTPPermanentRedirect("/static/docs")
+
 async def get_authorization(authorization):
     if test:
         return "iamtomahawkx", ["*"]
