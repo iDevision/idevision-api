@@ -19,7 +19,7 @@ reader = DocReader()
 router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
-@ratelimit(2, 10)
+@ratelimit(2, 5)
 async def do_rtfs(request: web.Request):
     query = request.query.get("query", None)
     if query is None:
@@ -33,7 +33,7 @@ async def do_rtfs(request: web.Request):
     return await rtfs_cache[lib].do_rtfs(query)
 
 @router.get("/api/public/rtfm")
-@ratelimit(2, 10)
+@ratelimit(2, 5)
 async def do_rtfm(request: web.Request):
     show_labels = request.query.get("show-labels", None)
     if show_labels is None:

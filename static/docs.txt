@@ -2,6 +2,12 @@ Because i'm a lazy fuck, you get plaintext docs.
 
 GET /api/public/rtfs
 
+
+Ratelimit
+----------
+2 requests per 5 seconds (2/5s). Exceeding this api by double (4/5s) will result in an automatic api ban.
+Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
+
 Required Query parameters
 ---------------------------
 - query : The actual query
@@ -18,6 +24,11 @@ Response 200
 ```
 
 GET /api/public/rtfm
+
+Ratelimit
+----------
+2 requests per 5 seconds (2/5s). Exceeding this api by double (4/5s) will result in an automatic api ban.
+Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
 
 Required Query parameters
 ---------------------------
