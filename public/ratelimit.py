@@ -42,9 +42,9 @@ class Ratelimiter:
         return self.do_call(request)
 
     async def do_call(self, request: web.Request):
-        print(request.headers)
+        ip = request.headers.get("X-Forwarded-For") or request.remote
         data = await request.app.db.fetchrow("SELECT reason, (SELECT username FROM auths WHERE auth_key = $2) AS login "
-                                               "FROM bans WHERE ip = $1", request.remote, request.headers.get("Authorization"))
+                                               "FROM bans WHERE ip = $1", ip, request.headers.get("Authorization"))
         if data is not None and data['reason']:
             return web.Response(status=403, reason=data['reason'])
 
@@ -54,7 +54,7 @@ class Ratelimiter:
             if ban is not None:
                 await request.app.db.execute(
                     "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
-                    request.remote, request.headers.get("user-agent"))
+                    ip, request.headers.get("user-agent"))
                 return web.Response(status=403, reason="Auto-ban from api spam")
 
             d, bucket = self.map.update_rate_limit(request)
