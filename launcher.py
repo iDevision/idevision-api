@@ -83,7 +83,7 @@ router.static("/static", "./static")
 
 @router.get("/docs")
 async def _docs(req):
-    raise web.HTTPPermanentRedirect("/static/docs")
+    raise web.HTTPPermanentRedirect("/static/docs.txt")
 
 async def get_authorization(authorization):
     if test:
