@@ -22,7 +22,7 @@ GET /api/public/rtfm
 Required Query parameters
 ---------------------------
 - query : The actual query
-- location : The location of the documentation. This should look something like https://discordpy.readthedocs.io/en/latest
+- location : The location of the documentation. This can be any sphinx generated documentation. Ex. https://discordpy.readthedocs.io/en/latest
 - show-labels : a boolean. When false, labels will not be returned in the results
 - label-labels : a boolean. When true, labels will have `label:` prepended to them. Does nothing when show-labels is false
 
@@ -34,3 +34,4 @@ Response 200
     "nodes": {"Node name": "URL of the documentation"},
     "query_time": "1.0"
 }
+```

@@ -1,0 +1,8 @@
+User-agent: *
+allow: /
+allow: /docs
+allow: /homepage
+
+User-agent: AdsBot-Google
+User-agent: Mediapartners-Google
+disallow: /

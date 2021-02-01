@@ -11,8 +11,8 @@ class Bucket2(BucketType):
 class Mapping(CooldownMapping):
     def get_bucket(self, request, current=None):
         self._verify_cache_integrity(current)
-        if request.remote == "127.0.0.1":
-            return None
+        #if request.remote == "127.0.0.1":
+        #    return None
 
         key = self._bucket_key(request)
         if key not in self._cache:
@@ -36,12 +36,29 @@ class Ratelimiter:
         self.per = per
         self.cb = callback
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
+        self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
 
     def __call__(self, request: web.Request):
         return self.do_call(request)
 
     async def do_call(self, request: web.Request):
-        d, bucket = self.map.update_rate_limit(request)
+        print(request.headers)
+        data = await request.app.db.fetchrow("SELECT reason, (SELECT username FROM auths WHERE auth_key = $2) AS login "
+                                               "FROM bans WHERE ip = $1", request.remote, request.headers.get("Authorization"))
+        if data is not None and data['reason']:
+            return web.Response(status=403, reason=data['reason'])
+
+        bucket = d = None
+        if data is None or not data['login']:
+            ban, _ = self.autoban.update_rate_limit(request)
+            if ban is not None:
+                await request.app.db.execute(
+                    "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
+                    request.remote, request.headers.get("user-agent"))
+                return web.Response(status=403, reason="Auto-ban from api spam")
+
+            d, bucket = self.map.update_rate_limit(request)
+
         if d:
             response = web.Response(status=429, reason="Too Many Requests")
         else:

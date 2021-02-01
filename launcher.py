@@ -407,11 +407,56 @@ async def auth_user(request: web.Request):
     await app.db.fetchrow("UPDATE auths SET active = true WHERE username = $1", usr)
     return web.Response(status=204)
 
+@router.get("/api/bans")
+async def get_bans(request: web.Request):
+    auth, routes = await get_authorization(request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not route_allowed(routes, "api/bans"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    ip = request.query.get("ip")
+    useragent = request.query.get("user-agent")
+    offset = request.query.get("offset")
+    if offset:
+        try:
+            offset = int(offset)
+        except:
+            return web.Response(status=400, reason="Bad offset parameter")
+    else:
+        offset = 0
+
+    if ip and useragent:
+        resp = await app.db.fetch("SELECT * FROM bans WHERE ip = $1 AND similarity($2, user_agent) > 0.8 LIMIT 50 OFFSET $3", ip, useragent, offset)
+    elif ip:
+        resp = await app.db.fetch("SELECT * FROM bans WHERE ip = $1 LIMIT 50 OFFSET $2", ip, offset)
+    elif useragent:
+        resp = await app.db.fetch("SELECT * FROM bans WHERE similarity($1, user_agent) > 0.8 LIMIT 50 OFFSET $2", offset)
+    else:
+        resp = await app.db.fetch("SELECT * FROM bans LIMIT 50 OFFSET $1", offset)
+
+    return web.json_response({"bans": [dict(x) for x in resp]})
+
+@router.post("/api/bans")
+async def create_ban(request: web.Request):
+    auth, routes = await get_authorization(request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not route_allowed(routes, "api/bans"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    ip = request.query.get("ip")
+    useragent = request.query.get("user-agent")
+    reason = request.query.get("reason")
+    await app.db.fetchrow("INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", ip, useragent, reason)
+    return web.Response(status=201)
+
 @router.get("/api/bots/stats")
 async def get_bot_stats(request: web.Request):
     response = {}
     for bot, d in app.bot_stats.items():
-        print(d)
         response[bot] = {
             "metrics": d['metrics'],
             "ramusage": d['ram_usage'],
@@ -542,20 +587,21 @@ async def home(request: web.Request):
 
 @router.get("/")
 async def home(request: web.Request):
-    return web.Response(body=index, content_type="text/html")
+    return web.FileResponse("index.html")
 
+@router.get("/robots.txt")
+async def robots(request: web.Request):
+    return web.FileResponse("static/robots.txt")
+
+@router.get("/favicon.ico")
+async def favicon(request):
+    return web.FileResponse("static/favicon.ico")
 
 router.static("/vendor", "vendor")
 router.static("/images", "images")
 router.static("/fonts", "fonts")
 router.static("/css", "css")
 router.static("/js", "js")
-
-with open("index.html") as f:
-    index = f.read()
-
-with open("homepage.html") as f:
-    homepage = f.read()
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./'))
 app.add_routes(router)
