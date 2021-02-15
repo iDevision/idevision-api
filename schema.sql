@@ -50,5 +50,7 @@ create table logs
     remote text not null,
     accessed timestamp not null,
     user_agent text not null,
-    endpoint text not null
+    endpoint text not null,
+    authorized_user text,
+    response_code integer not null
 );

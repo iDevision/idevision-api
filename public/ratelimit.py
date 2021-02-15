@@ -39,28 +39,42 @@ class Ratelimiter:
         self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
 
     def __call__(self, request: web.Request):
-        return self.do_call(request)
+        return self._wrap_call(request)
 
-    async def do_call(self, request: web.Request):
+    async def _wrap_call(self, request: web.Request):
+        async with request.app.db.acquire() as conn:
+            resp, login, did_ban = await self.do_call(request, conn)
+            if did_ban or resp.status != 403:
+                await conn.execute(
+                    "INSERT INTO logs VALUES ($1, (now() at time zone 'utc'), $2, $3)",
+                    request.headers.get("X-Forwarded-For") or request.remote,
+                    request.headers.get("User-Agent", "!!Not given!!"),
+                    request.path,
+                    login,
+                    403 if did_ban else resp.status
+                )
+            return resp
+
+    async def do_call(self, request: web.Request, conn):
         ip = request.headers.get("X-Forwarded-For") or request.remote
-        data = await request.app.db.fetchrow("SELECT reason, (SELECT username FROM auths WHERE auth_key = $2) AS login "
+        data = await conn.fetchrow("SELECT reason, (SELECT username FROM auths WHERE auth_key = $2) AS login "
                                                "FROM bans WHERE ip = $1", ip, request.headers.get("Authorization"))
         if data is not None and data['reason']:
-            return web.Response(status=403, reason=data['reason'])
+            return web.Response(status=403, reason=data['reason']), None, False
 
         bucket = d = None
         if data is None or not data['login']:
             ban, _ = self.autoban.update_rate_limit(request)
             if ban is not None:
-                await request.app.db.execute(
+                await conn.execute(
                     "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
                     ip, request.headers.get("user-agent"))
-                return web.Response(status=403, reason="Auto-ban from api spam")
+                return web.Response(status=403, reason="Auto-ban from api spam"), None, True
 
             d, bucket = self.map.update_rate_limit(request)
 
         if d:
-            response = web.Response(status=429, reason="Too Many Requests")
+            response = web.Response(status=429, reason="Too Many Requests"), data['login'], False
         else:
             response = await self.cb(request)
 
@@ -79,7 +93,7 @@ class Ratelimiter:
                 "ratelimit-retry-after": 0
             }
         response.headers.update({x: str(y) for x, y in headers.items()})
-        return response
+        return response, data['login'] if data else None, False
 
 def ratelimit(rate: int, per: int):
     def wrapped(func):
