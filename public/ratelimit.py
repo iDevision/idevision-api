@@ -46,7 +46,7 @@ class Ratelimiter:
             resp, login, did_ban = await self.do_call(request, conn)
             if did_ban or resp.status != 403:
                 await conn.execute(
-                    "INSERT INTO logs VALUES ($1, (now() at time zone 'utc'), $2, $3)",
+                    "INSERT INTO logs VALUES ($1, (now() at time zone 'utc'), $2, $3, $4, $5)",
                     request.headers.get("X-Forwarded-For") or request.remote,
                     request.headers.get("User-Agent", "!!Not given!!"),
                     request.path,
