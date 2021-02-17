@@ -74,7 +74,7 @@ class Ratelimiter:
             d, bucket = self.map.update_rate_limit(request)
 
         if d:
-            response = web.Response(status=429, reason="Too Many Requests"), data['login'] if data else None, False
+            response = web.Response(status=429, reason="Too Many Requests")
         else:
             response = await self.cb(request)
 
