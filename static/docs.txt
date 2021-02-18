@@ -11,7 +11,7 @@ Please follow the ratelimit-retry-after headers when you recieve a 429 response 
 Required Query parameters
 ---------------------------
 - query : The actual query
-- library : The module to find source for. One of twitchio or discord.py
+- library : The module to find source for. One of twitchio, wavelink, or discord.py
 
 Returns
 --------

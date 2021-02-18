@@ -5,12 +5,13 @@ from .ratelimit import ratelimit
 from .rtfm import DocReader
 from .rtfs import Index
 
-import twitchio, discord
+import twitchio, discord, wavelink
 
 print("[RTFS] Start indexing")
 rtfs_cache = {
-    "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/").do_index(discord, 1, 2),
-    "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/").do_index(twitchio, 2, 2)
+    "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/").do_index(discord, 1, 3),
+    "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/").do_index(twitchio, 2, 3),
+    "wavelink": Index(f"https://github.com/PythonistaGuild/Wavelink/v{wavelink.__version__.strip('a')}/").do_index(wavelink, 3, 3)
 }
 print("[RTFS] Finish indexing")
 
