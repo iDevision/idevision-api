@@ -94,9 +94,9 @@ class Index:
             modname = (r.replace("\\", ".").replace("/", ".") + "." if r else "") + f.replace(".py", "")
             modname = modname.strip().strip(".")
             if modname:
-                modname = package.__title__ + '.' + modname
+                modname = package.__title__.lower() + '.' + modname
             else:
-                modname = package.__title__
+                modname = package.__title__.lower()
 
             return importlib.import_module(modname)
 
