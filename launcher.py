@@ -9,7 +9,7 @@ import subprocess
 
 subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
 
-from endpoints.public.endpoints import router as _api_router
+import endpoints
 import utils
 
 uptime = datetime.datetime.utcnow()
@@ -45,14 +45,14 @@ DEFAULT_ROUTES = [
 ]
 
 app = utils.App()
-app.add_routes(_api_router)
+endpoints.setup(app)
 router = web.RouteTableDef()
 
 router.static("/static", "./static")
 
 @router.get("/docs")
-async def _docs(req):
-    raise web.HTTPPermanentRedirect("/static/docs.txt")
+async def _docs(_):
+    raise web.HTTPPermanentRedirect("/static/docs.md")
 
 @router.post("/api/media/container/upload")
 async def usercontent_upload(request: utils.TypedRequest):
