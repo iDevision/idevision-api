@@ -1,9 +1,16 @@
+import pathlib
+import uuid
+import os
+
 from yarl import URL
 from aiohttp import web
 
 from ratelimit import ratelimit
 from .rtfm import DocReader
 from .rtfs import Index
+from . import ocr
+
+import utils
 
 import twitchio, discord, wavelink
 
@@ -21,7 +28,7 @@ router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
 @ratelimit(3, 5)
-async def do_rtfs(request: web.Request):
+async def do_rtfs(request: utils.TypedRequest):
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
@@ -35,7 +42,7 @@ async def do_rtfs(request: web.Request):
 
 @router.get("/api/public/rtfm")
 @ratelimit(3, 5)
-async def do_rtfm(request: web.Request):
+async def do_rtfm(request: utils.TypedRequest):
     show_labels = request.query.get("show-labels", None)
     if show_labels is None:
         return web.Response(status=400, reason="Missing show-labels parameter")
@@ -57,3 +64,33 @@ async def do_rtfm(request: web.Request):
         return web.Response(status=400, reason="Mising query parameter")
     return await reader.do_rtfm(str(location), query, show_labels, label_labels)
 
+@router.get("/api/public/ocr")
+@ratelimit(1, 5)
+async def do_ocr(request: utils.TypedRequest):
+    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one", status=401)
+
+    if not utils.route_allowed(routes, "api/public/ocr"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    reader = await request.multipart()
+    data = await reader.next()
+    extension = data.filename.split(".").pop().replace("/", "")
+    name = ('%032x' % uuid.uuid4().int)[:8] + "." + extension
+    pth = pathlib.Path(f"/var/www/idevision/tmp/{name}")
+    buffer = pth.open("wb")
+    while True:
+        try:
+            chunk = await data.read_chunk()
+            if not chunk:
+                break
+            buffer.write(chunk)
+        except:
+            pass
+
+    buffer.close()
+
+    response = await ocr.do_ocr(pth, request.app.loop)
+    os.remove(pth)
+    return web.json_response({"data": response})

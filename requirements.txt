@@ -1,5 +1,6 @@
 asyncpg
 aiohttp
+pytesseract
 prometheus_client
 aiohttp_jinja2
 
