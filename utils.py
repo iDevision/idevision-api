@@ -62,7 +62,7 @@ class App(web.Application):
                 if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
                     self.prometheus['online'].labels(bot=bname).info({"state": "Offline"})
 
-            await asyncio.shield(self.db.execute("DELETE FROM bans WHERE expires is not null and expiry <= (now() at time zone 'utc')"), loop=self._loop)
+            await asyncio.shield(self.db.execute("DELETE FROM bans WHERE expires is not null and expires <= (now() at time zone 'utc')"), loop=self._loop)
             await asyncio.sleep(120)
 
     def stop(self):
