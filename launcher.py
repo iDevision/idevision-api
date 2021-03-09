@@ -52,7 +52,7 @@ router.static("/static", "./static")
 
 @router.get("/docs")
 async def _docs(_):
-    raise web.HTTPPermanentRedirect("/static/docs.md")
+    raise web.HTTPPermanentRedirect("/static/docs.html")
 
 @router.post("/api/media/container/upload")
 async def usercontent_upload(request: utils.TypedRequest):
