@@ -65,7 +65,7 @@ async def do_rtfm(request: utils.TypedRequest):
     return await reader.do_rtfm(str(location), query, show_labels, label_labels)
 
 @router.get("/api/public/ocr")
-@ratelimit(1, 5)
+@ratelimit(2, 10)
 async def do_ocr(request: utils.TypedRequest):
     auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:

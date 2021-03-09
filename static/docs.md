@@ -60,3 +60,32 @@ Response 200
     "query_time": "1.0"
 }
 ```
+
+POST /api/public/ocr
+======================
+
+* Requires an idevision API token
+
+This endpoint takes a multipart file, and returns the contents of the image as text.
+> this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint. \
+> Only two images are processed at a time (globally).
+
+Ratelimit
+----------
+2 requests per 10 seconds (2/10s). \
+Exceeding this api by double (4/10s) will result in an automatic api ban
+(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
+
+Required Query parameters
+---------------------------
+None
+
+Returns
+--------
+Response 200
+```json
+{
+    "data": "Content here"
+}
+```
