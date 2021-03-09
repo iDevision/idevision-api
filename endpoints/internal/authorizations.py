@@ -122,7 +122,7 @@ async def generate_token(request: utils.TypedRequest):
         if await conn.fetchval("UPDATE auths SET auth_token = $1 WHERE username = $2 RETURNING username", new_token, username) is not None:
             return web.json_response({"token": new_token})
         else:
-            return web.Response(status=400, reason="Account not found")
+            return web.Response(status=400, text="Account not found", reason="Account not found")
 
 
 @router.post("/api/internal/users/manage")
