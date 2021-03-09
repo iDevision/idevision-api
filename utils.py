@@ -42,7 +42,6 @@ class App(web.Application):
         }
         self.bot_stats = {}
         self.on_startup.append(self.async_init)
-        self._task = self._loop.create_task(self.offline_task())
         self.test = test
         self._closing = False
 
@@ -55,6 +54,7 @@ class App(web.Application):
             pass
         else:
             self.db: asyncpg.Pool = await asyncpg.create_pool("postgresql://tom:tom@127.0.0.1:5432/idevision")
+            self._task = self._loop.create_task(self.offline_task())
 
     async def offline_task(self):
         while True:
