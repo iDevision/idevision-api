@@ -30,7 +30,7 @@ def route_allowed(allowed_routes, route):
 
 class App(web.Application):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, middlewares=[self.shuttingdown_middleware])
+        super().__init__(*args, **kwargs, middlewares=[shuttingdown_middleware])
         self._loop = asyncio.get_event_loop()
         self.last_upload = None
         self.prometheus = {
@@ -56,12 +56,6 @@ class App(web.Application):
         else:
             self.db: asyncpg.Pool = await asyncpg.create_pool("postgresql://tom:tom@127.0.0.1:5432/idevision")
 
-    async def shuttingdown_middleware(self, request: "TypedRequest", handler: Callable):
-        if self._closing:
-            return web.Response(status=503, reason="Restarting", body="Service is restarting, please try again in 30 seconds.")
-
-        return await handler(request)
-
     async def offline_task(self):
         while True:
             for bname, bot in self.bot_stats.items():
@@ -79,6 +73,13 @@ class App(web.Application):
             self._loop.stop()
 
         self._loop.create_task(_stop())
+
+@web.middleware
+async def shuttingdown_middleware(request: "TypedRequest", handler: Callable):
+    if request.app._closing:
+        return web.Response(status=503, reason="Restarting", body="Service is restarting, please try again in 30 seconds.")
+
+    return await handler(request)
 
 class TypedRequest(web.Request):
     app: App
