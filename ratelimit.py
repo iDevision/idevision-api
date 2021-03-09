@@ -4,6 +4,8 @@ from typing import Tuple, Optional
 from aiohttp import web
 from discord.ext.commands import CooldownMapping, BucketType, Cooldown
 
+import utils
+
 class Bucket2(BucketType):
     def get_key(self, request: web.Request):
         return request.remote
@@ -38,10 +40,10 @@ class Ratelimiter:
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
         self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
 
-    def __call__(self, request: web.Request):
+    def __call__(self, request: utils.TypedRequest):
         return self._wrap_call(request)
 
-    async def _wrap_call(self, request: web.Request):
+    async def _wrap_call(self, request: utils.TypedRequest):
         async with request.app.db.acquire() as conn:
             resp, login, did_ban = await self.do_call(request, conn)
             if did_ban or resp.status != 403:
@@ -55,17 +57,28 @@ class Ratelimiter:
                 )
             return resp
 
-    async def do_call(self, request: web.Request, conn):
+    async def do_call(self, request: utils.TypedRequest, conn):
         ip = request.headers.get("X-Forwarded-For") or request.remote
-        data = await conn.fetchrow("SELECT reason, (SELECT username FROM auths WHERE auth_key = $2) AS login "
-                                               "FROM bans WHERE ip = $1", ip, request.headers.get("Authorization"))
-        if data is not None and data['reason']:
-            return web.Response(status=403, reason=data['reason']), None, False
+        data = await conn.fetchrow("""
+            SELECT
+                (SELECT reason FROM bans WHERE ip = $1),
+                (SELECT username FROM auths WHERE auth_key = $2) AS login,
+                (SELECT ignores_ratelimits FROM auths WHERE auth_key = $2),
+                (SELECT active FROM auths WHERE auth_key = $1)
+            """, ip, request.headers.get("Authorization"))
+        if data is not None:
+            if data['reason']:
+                return web.Response(status=403, reason=data['reason']), None, False
+            elif data['active'] is False:
+                return web.Response(status=403, reason="Account is disabled"), None, False
 
         bucket = d = None
-        if data is None or not data['login']:
+        if data is None or not data['ignores_ratelimits']:
             ban, _ = self.autoban.update_rate_limit(request)
             if ban is not None:
+                if data is not None and data['login']:
+                    await conn.execute("UPDATE auths SET active = false WHERE username = $1", data['login'])
+
                 await conn.execute(
                     "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
                     ip, request.headers.get("user-agent"))

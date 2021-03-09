@@ -1,7 +1,7 @@
 from yarl import URL
 from aiohttp import web
 
-from .ratelimit import ratelimit
+from ratelimit import ratelimit
 from .rtfm import DocReader
 from .rtfs import Index
 
@@ -20,7 +20,7 @@ reader = DocReader()
 router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
-@ratelimit(2, 5)
+@ratelimit(3, 5)
 async def do_rtfs(request: web.Request):
     query = request.query.get("query", None)
     if query is None:
@@ -34,7 +34,7 @@ async def do_rtfs(request: web.Request):
     return await rtfs_cache[lib].do_rtfs(query)
 
 @router.get("/api/public/rtfm")
-@ratelimit(2, 5)
+@ratelimit(3, 5)
 async def do_rtfm(request: web.Request):
     show_labels = request.query.get("show-labels", None)
     if show_labels is None:

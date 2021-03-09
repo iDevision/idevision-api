@@ -4,7 +4,9 @@ create table auths
     username       text primary key,
     auth_key       text,
     allowed_routes text[],
-    active         boolean default true not null
+    active         boolean default true not null,
+    discord_id     bigint,
+    ignores_ratelimits boolean not null default false
 );
 create table uploads
 (
@@ -12,18 +14,12 @@ create table uploads
     username text references auths (username) ON DELETE CASCADE,
     time     timestamp
 );
-create table bot_data
-(
-    botname   text references auths (username),
-    ping      integer,
-    latency   integer,
-    timestamp integer
-);
-create table tinyurls
-(
-    username text references auths (username) ON DELETE CASCADE,
-    link     text,
-    url      text
+create table applications (
+    userid  bigint primary key,
+    username text not null,
+    reason text not null,
+    routes text[] not null,
+    decline_reason text
 );
 create table homepages
 (
@@ -43,7 +39,8 @@ create table bans
     ip text primary key,
     timestamp timestamp not null default (now() at time zone 'utc'),
     user_agent text,
-    reason text
+    reason text,
+    expires timestamp without time zone
 );
 create table logs
 (

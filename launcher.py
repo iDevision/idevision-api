@@ -1,19 +1,16 @@
 from aiohttp import web
-import io
-import random
-import asyncpg
 import datetime
 import prometheus_client
 import aiohttp_jinja2
 import jinja2
-import asyncio
 import os
 import sys
 import subprocess
 
 subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
 
-from public.endpoints import router as _api_router
+from endpoints.public.endpoints import router as _api_router
+import utils
 
 uptime = datetime.datetime.utcnow()
 test = "--unittest" in sys.argv
@@ -47,35 +44,7 @@ DEFAULT_ROUTES = [
     "api/media/images",
 ]
 
-class App(web.Application):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.last_upload = None
-        self.prometheus = {
-            "counts": prometheus_client.Gauge("bot_data", "Guilds that the bot has", labelnames=["count", "bot"]),
-            "websocket_events": prometheus_client.Counter("bot_events", "bot's metrics", labelnames=['event', "bot"]),
-            "latency": prometheus_client.Gauge("bot_latency", "bot's latency", labelnames=["count", "bot"]),
-            "ram_usage": prometheus_client.Gauge("bot_ram", "How much ram the bot is using", labelnames=["count", "bot"]),
-            "online": prometheus_client.Info("bot_online", "the bot's status", labelnames=["bot"]),
-        }
-        self.bot_stats = {}
-        self.on_startup.append(self.async_init)
-
-    async def async_init(self, _):
-        if test:
-            pass
-        else:
-            self.db = await asyncpg.create_pool("postgresql://tom:tom@127.0.0.1:5432/idevision")
-
-    async def offline_task(self):
-        while True:
-            for bname, bot in self.bot_stats.items():
-                if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
-                    self.prometheus['online'].labels(bot=bname).info({"state": "Offline"})
-
-                await asyncio.sleep(120)
-
-app = App()
+app = utils.App()
 app.add_routes(_api_router)
 router = web.RouteTableDef()
 
@@ -85,60 +54,13 @@ router.static("/static", "./static")
 async def _docs(req):
     raise web.HTTPPermanentRedirect("/static/docs.txt")
 
-async def get_authorization(authorization):
-    if test:
-        return "iamtomahawkx", ["*"]
-
-    resp = await app.db.fetchrow("SELECT username, allowed_routes FROM auths WHERE auth_key = $1 and active = true", authorization)
-    if resp is not None:
-        return resp['username'], resp['allowed_routes']
-    return None, []
-
-def route_allowed(allowed_routes, route):
-    if "*" in allowed_routes:
-        return True
-
-    if "{" in route:
-        route = route.split("{")[0] # remove any args
-
-    route = route.strip("/")
-    return route in allowed_routes
-
-@router.post("/api/media/post")
-async def post_media(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/post"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    reader = await request.multipart()
-    data = await reader.next()
-    extension = data.filename.split(".").pop()
-    new_name = "".join([random.choice(choices) for _ in range(8)]) + f".{extension}"
-    buffer = io.FileIO(f"/var/www/idevision/media/{new_name}", mode="w")
-    while True:
-        chunk = await data.read_chunk()
-        if not chunk:
-            break
-        buffer.write(chunk)
-
-    buffer.close()
-    await app.db.execute("INSERT INTO uploads VALUES ($1,$2,$3)", new_name, auth, datetime.datetime.utcnow())
-    app.last_upload = new_name
-    if auth == "random" or auth == "life":
-        return web.json_response({"url": "https://cdn.idevision.net/tLu.png", "sike_heres_the_real_url": "https://cdn.idevision.net/"+new_name})
-
-    return web.json_response({"url": "https://cdn.idevision.net/"+new_name}, status=200)
-
 @router.post("/api/media/container/upload")
-async def usercontent_upload(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
+async def usercontent_upload(request: utils.TypedRequest):
+    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not route_allowed(routes, "api/media/container"):
+    if not utils.route_allowed(routes, "api/media/container"):
         return web.Response(text="401 Unauthorized", status=401)
 
     if test:
@@ -180,281 +102,8 @@ async def usercontent_upload(request: web.Request):
 
     return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
 
-
-@router.delete("/api/media/images/{image}")
-async def delete_image(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/images"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if test:
-        return web.Response(status=204)
-
-    if "*" in routes:
-        coro = app.db.fetchrow("DELETE FROM uploads WHERE key = $1 RETURNING *;", request.match_info.get("image"))
-
-    else:
-        coro = app.db.fetchrow("DELETE FROM uploads WHERE key = $1 AND username = $2 RETURNING *;", request.match_info.get("image"), auth)
-
-    if not await coro:
-        if "*" in routes:
-            return web.Response(text="404 NOT FOUND", status=404)
-
-        return web.Response(text="401 Unauthorized", status=401)
-
-    os.remove("/var/www/idevision/media/"+request.match_info.get("image"))
-    return web.Response(status=204)
-
-@router.delete("/api/media/purge")
-async def purge_user(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/purge"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    usr = data.get("username")
-    if test:
-        return web.Response(status=204)
-
-    data = await app.db.fetch("DELETE FROM uploads WHERE username = $1 RETURNING *;", usr)
-    if not data:
-        return web.Response(status=400, reason="User not found/no images to delete")
-
-    for row in data:
-        os.remove("/var/www/idevision/media/" + row['key'])
-
-    return web.Response()
-
-@router.get("/api/media/stats")
-async def get_media_stats(request: web.Request):
-    if test:
-        amount = 10
-    else:
-        amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads;")
-
-    return web.json_response({
-        "upload_count": amount,
-        "last_upload": app.last_upload
-    })
-
-@router.get("/api/media/list")
-async def get_media_list(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/list"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if test:
-        return web.json_response({"iamtomahawkx": ["1.png", "2.png"]})
-
-    values = await app.db.fetch("SELECT * FROM uploads")
-    resp = {}
-    for rec in values:
-        if rec['username'] in resp:
-            resp[rec['username']].append(rec['key'])
-        else:
-            resp[rec['username']] = [rec['key']]
-
-    return web.json_response(resp)
-
-@router.get("/api/media/list/user/{user}")
-async def get_media_list(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/list/user"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    usr = request.match_info.get("user", auth)
-    if test:
-        return web.json_response(["1.png", "2.jpg"])
-
-    values = await app.db.fetch("SELECT * FROM uploads WHERE username = $1;", usr)
-    return web.json_response([rec['key'] for rec in values])
-
-@router.get("/api/media/images/{image}")
-async def get_upload_stats(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/images"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    key = request.match_info.get("key")
-    if test:
-        return web.json_response({
-            "url": "https://cdn.idevision.net/abc.png",
-            "timestamp": datetime.datetime.utcnow().timestamp(),
-            "username": "iamtomahawkx"
-        })
-
-    about = await app.db.fetchrow("SELECT * FROM uploads WHERE key = $1", key)
-    if not about:
-        return web.Response(text="404 Not Found", status=404)
-
-    return web.json_response({
-        "url": "https://cdn.idevision.net/" + about[0],
-        "timestamp": about[2].timestamp(),
-        "username": about[1]
-    })
-
-@router.get("/api/media/stats/user")
-async def get_user_stats(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/media/stats/user"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    if test:
-        return web.json_response({
-            "upload_count": 0,
-            "last_upload": "https://cdn.idevision.net/abc.png"
-        })
-
-    amount = await app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1", data['username'])
-    recent = await app.db.fetchval("SELECT key FROM uploads WHERE username = $1 ORDER BY time DESC", data['username'])
-    if not amount and not recent:
-        return web.Response(status=400, reason="User not found/no entries")
-
-    return web.json_response({
-        "upload_count": amount,
-        "last_upload": "https://cdn.idevision.net/" + recent
-    })
-
-@router.post("/api/users/manage")
-async def add_user(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/users/manage"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    routes = [x.strip("/") for x in data.get("routes", [])] or DEFAULT_ROUTES
-    if test:
-        return web.Response(status=204)
-
-    await app.db.execute("INSERT INTO auths VALUES ($1, $2, $3, true)", data['username'], data['authorization'], routes)
-    return web.Response(status=204)
-
-@router.delete("/api/users/manage")
-async def remove_user(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/users/manage"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    usr = data.get("username")
-    if test:
-        return web.Response(status=204)
-
-    data = await app.db.fetch("SELECT key FROM uploads WHERE username = $1", usr)
-    for row in data:
-        os.remove("/var/www/idevision/media/" + row['key'])
-
-    await app.db.execute("DELETE FROM auths WHERE username = $1", usr)
-    return web.Response(status=204)
-
-@router.post("/api/users/deauth")
-async def deauth_user(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/users/manage"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    usr = data.get("username")
-
-    if test:
-        return web.Response(status=204)
-
-    await app.db.fetchrow("UPDATE auths SET active = false WHERE username = $1", usr)
-    return web.Response(status=204)
-
-@router.post("/api/users/auth")
-async def auth_user(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/users/manage"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    usr = data.get("username")
-    if test:
-        return web.Response(status=204)
-
-    await app.db.fetchrow("UPDATE auths SET active = true WHERE username = $1", usr)
-    return web.Response(status=204)
-
-@router.get("/api/bans")
-async def get_bans(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/bans"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    ip = request.query.get("ip")
-    useragent = request.query.get("user-agent")
-    offset = request.query.get("offset")
-    if offset:
-        try:
-            offset = int(offset)
-        except:
-            return web.Response(status=400, reason="Bad offset parameter")
-    else:
-        offset = 0
-
-    if ip and useragent:
-        resp = await app.db.fetch("SELECT * FROM bans WHERE ip = $1 AND similarity($2, user_agent) > 0.8 LIMIT 50 OFFSET $3", ip, useragent, offset)
-    elif ip:
-        resp = await app.db.fetch("SELECT * FROM bans WHERE ip = $1 LIMIT 50 OFFSET $2", ip, offset)
-    elif useragent:
-        resp = await app.db.fetch("SELECT * FROM bans WHERE similarity($1, user_agent) > 0.8 LIMIT 50 OFFSET $2", offset)
-    else:
-        resp = await app.db.fetch("SELECT * FROM bans LIMIT 50 OFFSET $1", offset)
-
-    return web.json_response({"bans": [dict(x) for x in resp]})
-
-@router.post("/api/bans")
-async def create_ban(request: web.Request):
-    auth, routes = await get_authorization(request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not route_allowed(routes, "api/bans"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    ip = request.query.get("ip")
-    useragent = request.query.get("user-agent")
-    reason = request.query.get("reason")
-    await app.db.fetchrow("INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", ip, useragent, reason)
-    return web.Response(status=201)
-
 @router.get("/api/bots/stats")
-async def get_bot_stats(request: web.Request):
+async def get_bot_stats(_):
     response = {}
     for bot, d in app.bot_stats.items():
         response[bot] = {
@@ -470,13 +119,13 @@ async def get_bot_stats(request: web.Request):
     return web.json_response(response, status=200)
 
 @router.get("/metrics")
-async def get_metrics(request: web.Request):
+async def get_metrics(_):
     data = prometheus_client.generate_latest()
     resp = web.Response(body=data, headers={"Content-type": prometheus_client.CONTENT_TYPE_LATEST})
     return resp
 
 @router.post("/api/bots/updates")
-async def post_bot_stats(request: web.Request):
+async def post_bot_stats(request: utils.TypedRequest):
     payload = {
         "metrics": {
             "GUILD_CREATE": 0,
@@ -488,7 +137,7 @@ async def post_bot_stats(request: web.Request):
         "latency": 99 # in ms
     }
     token = request.headers.get("Authorization")
-    auth, _ = await get_authorization(token)
+    auth, _ = await utils.get_authorization(request, token)
     if not auth or not token.startswith("bot."):
         return web.Response(status=401, text="401 Unauthorized")
 
@@ -519,19 +168,20 @@ async def post_bot_stats(request: web.Request):
 
 
 @router.post("/api/git/checks")
-async def git_checks(request: web.Request):
+async def git_checks(request: utils.TypedRequest):
     data = await request.json()
 
     if data['action'] == "completed" and data['check_run']['conclusion'] == "success":
         import subprocess
-        subprocess.run(["/usr/bin/bash", "-c", "at now"], input=b"git pull origin master && systemctl --user restart idevision")
-        print(f"restart from {request.headers['x-real-ip']}", file=sys.stderr)
+        subprocess.run(["/usr/bin/git", "pull", "origin", "master"])
+        print(f"restart from {request.headers['x-forwarded-ip']}", file=sys.stderr)
+        request.app.stop()
 
     return web.Response()
 
 @router.post("/api/home/urls")
-async def home_urls(request: web.Request):
-    auth, _ = await get_authorization(request.headers.get("Authorization"))
+async def home_urls(request: utils.TypedRequest):
+    auth, _ = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
@@ -586,15 +236,15 @@ async def home(request: web.Request):
     }
 
 @router.get("/")
-async def home(request: web.Request):
+async def home(_):
     return web.FileResponse("index.html")
 
 @router.get("/robots.txt")
-async def robots(request: web.Request):
+async def robots(_):
     return web.FileResponse("static/robots.txt")
 
 @router.get("/favicon.ico")
-async def favicon(request):
+async def favicon(_):
     return web.FileResponse("static/favicon.ico")
 
 router.static("/vendor", "vendor")
