@@ -7,8 +7,13 @@ from discord.ext.commands import CooldownMapping, BucketType, Cooldown
 import utils
 
 class Bucket2(BucketType):
-    def get_key(self, request: web.Request):
-        return request.remote
+    USERNAME = 10
+    def get_key(self, request: utils.TypedRequest):
+        if self is Bucket2.default:
+            print(request.remote)
+            return request.remote
+        elif self is Bucket2.USERNAME:
+            return request.username
 
 class Mapping(CooldownMapping):
     def get_bucket(self, request, current=None):
@@ -32,6 +37,8 @@ class Mapping(CooldownMapping):
 
         return None, None
 
+_DEFAULT_DICT = {'reason': None, "login": None, "ignores_ratelimits": False, "active": None}
+
 class Ratelimiter:
     def __init__(self, rate: int, per: int, callback):
         self.rate = rate
@@ -39,6 +46,8 @@ class Ratelimiter:
         self.cb = callback
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
         self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
+        self.auth_map = Mapping.from_cooldown(rate*2, per, Bucket2.USERNAME)
+        self.auth_autoban = Mapping.from_cooldown(rate*3, per, Bucket2.USERNAME)
 
     def __call__(self, request: utils.TypedRequest):
         return self._wrap_call(request)
@@ -65,18 +74,28 @@ class Ratelimiter:
                 (SELECT username FROM auths WHERE auth_key = $2) AS login,
                 (SELECT ignores_ratelimits FROM auths WHERE auth_key = $2),
                 (SELECT active FROM auths WHERE auth_key = $1)
-            """, ip, request.headers.get("Authorization"))
-        if data is not None:
-            if data['reason']:
-                return web.Response(status=403, reason=data['reason']), None, False
-            elif data['active'] is False:
-                return web.Response(status=403, reason="Account is disabled"), None, False
+            """, ip, request.headers.get("Authorization")) or _DEFAULT_DICT
+        if data['reason']:
+            return web.Response(status=403, reason=data['reason']), None, False
+        elif data['active'] is False:
+            return web.Response(status=403, reason="Account is disabled"), None, False
 
+        authorized = data['active']
         bucket = d = None
-        if data is None or not data['ignores_ratelimits']:
-            ban, _ = self.autoban.update_rate_limit(request)
+
+        request.username = data['login']
+
+        high_map, low_map = self.autoban, self.map
+        if authorized and data['ignores_ratelimits'] is not True:
+            low_map.update_rate_limit(request)
+            high_map.update_rate_limit(request) # track these still to track ips and whatnot, in case they stop using a token
+
+            high_map, low_map = self.auth_autoban, self.auth_map
+
+        if not data['ignores_ratelimits']:
+            ban, _ = high_map.update_rate_limit(request)
             if ban is not None:
-                if data is not None and data['login']:
+                if authorized:
                     await conn.execute("UPDATE auths SET active = false WHERE username = $1", data['login'])
 
                 await conn.execute(
@@ -84,7 +103,7 @@ class Ratelimiter:
                     ip, request.headers.get("user-agent"))
                 return web.Response(status=403, reason="Auto-ban from api spam"), None, True
 
-            d, bucket = self.map.update_rate_limit(request)
+            d, bucket = low_map.update_rate_limit(request)
 
         if d:
             response = web.Response(status=429, reason="Too Many Requests")

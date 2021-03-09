@@ -1,7 +1,7 @@
 import sys
 import datetime
 import asyncio
-from typing import Callable
+from typing import Callable, Optional
 
 import prometheus_client
 import asyncpg
@@ -83,3 +83,4 @@ async def shuttingdown_middleware(request: "TypedRequest", handler: Callable):
 
 class TypedRequest(web.Request):
     app: App
+    username: Optional[str]
