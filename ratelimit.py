@@ -7,12 +7,11 @@ from discord.ext.commands import CooldownMapping, BucketType, Cooldown
 import utils
 
 class Bucket2(BucketType):
-    USERNAME = 10
     def get_key(self, request: utils.TypedRequest):
         if self is Bucket2.default:
             print(request.remote)
             return request.remote
-        elif self is Bucket2.USERNAME:
+        elif self is Bucket2.user:
             return request.username
 
 class Mapping(CooldownMapping):
@@ -46,8 +45,8 @@ class Ratelimiter:
         self.cb = callback
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
         self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
-        self.auth_map = Mapping.from_cooldown(rate*2, per, Bucket2.USERNAME)
-        self.auth_autoban = Mapping.from_cooldown(rate*3, per, Bucket2.USERNAME)
+        self.auth_map = Mapping.from_cooldown(rate*2, per, Bucket2.user)
+        self.auth_autoban = Mapping.from_cooldown(rate*3, per, Bucket2.user)
 
     def __call__(self, request: utils.TypedRequest):
         return self._wrap_call(request)
