@@ -24,15 +24,17 @@ async def apply(request: utils.TypedRequest):
 
     async with request.app.db.acquire() as conn:
         try:
-            declined = await conn.fetchval("SELECT decline_reason FROM applications WHERE userid = $1", data['userid'])
-            if declined is not None:
-                return web.Response(body=f"Your application has been declined for the following reason: {declined}", status=403)
+            declined = await conn.fetchrow("SELECT decline_reason, auths.discord_id AS exists FROM applications INNER JOIN auths ON auths.discord_id = $1 WHERE userid = $1", data['userid'])
+            if declined is not None and declined['decline_reason']:
+                return web.Response(text=f"Your application has been declined for the following reason: {declined['decline_reason']}", status=403)
+            elif declined['exists']:
+                return web.Response(text="You already have an account", status=403)
 
             await conn.execute("INSERT INTO applications VALUES ($1, $2, $3, $4)", data['userid'], data['username'], data['reason'], data['routes'])
         except KeyError as e:
-            return web.Response(text=f"400 Missing {e.args[0]} body value", status=400)
+            return web.Response(text=f"Missing {e.args[0]} body value", status=400)
         except asyncpg.UniqueViolationError:
-            return web.Response(text="403 Already Applied", status=403)
+            return web.Response(text="Already Applied", status=403)
         else:
             return web.Response(status=201)
 
@@ -54,7 +56,7 @@ async def accept_user(request: utils.TypedRequest):
     application = await request.app.db.fetchrow("DELETE FROM applications WHERE userid = $1 RETURNING userid, username, routes", userid)
 
     if application is None:
-        return web.Response(status=400, reason="Application not found")
+        return web.Response(status=400, text="Application not found")
 
     token = f"user.{application['username']}.{secrets.token_urlsafe(25)}"
     await request.app.db.execute(
@@ -95,6 +97,33 @@ async def deny_user(request: utils.TypedRequest):
         return web.Response(status=400, reason="Application not found")
 
     return web.Response(status=204)
+
+@router.post("/api/internal/users/token")
+async def generate_token(request: utils.TypedRequest):
+    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    async with request.app.db.acquire() as conn:
+        try:
+            data = await request.json()
+            if "discord_id" in data:
+                username = await conn.fetchval("SELECT username FROM auths WHERE discord_id = $1", data['discord_id'])
+            elif "username" in data:
+                username = data['username']
+            else:
+                username = auth
+            if username != auth and not utils.route_allowed(routes, "api/internal/users/manage"):
+                return web.Response(text="401 Unauthorized", status=401)
+        except:
+            return web.Response(text="Invalid JSON", status=400)
+
+        new_token = f"user.{username}.{secrets.token_urlsafe(25)}"
+        if await conn.fetchval("UPDATE auths SET auth_token = $1 WHERE username = $2 RETURNING username", new_token, username) is not None:
+            return web.json_response({"token": new_token})
+        else:
+            return web.Response(status=400, reason="Account not found")
+
 
 @router.post("/api/internal/users/manage")
 async def add_user(request: utils.TypedRequest):
