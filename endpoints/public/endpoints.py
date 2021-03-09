@@ -92,5 +92,6 @@ async def do_ocr(request: utils.TypedRequest):
     buffer.close()
 
     response = await ocr.do_ocr(pth, request.app.loop)
+    print(response)
     os.remove(pth)
     return web.json_response({"data": response})
