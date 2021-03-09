@@ -31,6 +31,7 @@ def route_allowed(allowed_routes, route):
 class App(web.Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, middlewares=[self.shuttingdown_middleware])
+        self._loop = asyncio.get_event_loop()
         self.last_upload = None
         self.prometheus = {
             "counts": prometheus_client.Gauge("bot_data", "Guilds that the bot has", labelnames=["count", "bot"]),
