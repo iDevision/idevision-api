@@ -5,7 +5,7 @@ Tokens
 tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available
 to everyone at https://cdn.idevision.net, uploading images and viewing statistic endpoints requires a token), the OCR API, and so on. \
 You can apply for a token to the OCR API by using the `idevision apply` command on the `BOB (dev)#0346` bot on discord. \
-You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discresion. \
+You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discretion. \
 For any other endpoints, please message IAmTomahawkx#1000 on discord.
 
 
