@@ -69,14 +69,23 @@ async def do_rtfm(request: utils.TypedRequest):
 async def do_ocr(request: utils.TypedRequest):
     auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one", status=401)
+        r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
+        return web.Response(text=r, status=401)
 
     if not utils.route_allowed(routes, "api/public/ocr"):
         return web.Response(text="401 Unauthorized", status=401)
 
-    reader = await request.multipart()
+    try:
+        reader = await request.multipart()
+    except AssertionError:
+        return web.Response(status=400, text="Expected a Multipart request")
+
     data = await reader.next()
-    extension = data.filename.split(".").pop().replace("/", "")
+    try:
+        extension = data.filename.split(".").pop().replace("/", "")
+    except:
+        return web.Response(status=400, text="Invalid/No filename provided")
+
     name = ('%032x' % uuid.uuid4().int)[:8] + "." + extension
     pth = pathlib.Path(f"/var/www/idevision/tmp/{name}")
     buffer = pth.open("wb")
