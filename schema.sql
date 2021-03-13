@@ -12,7 +12,10 @@ create table uploads
 (
     key      text,
     username text references auths (username) ON DELETE CASCADE,
-    time     timestamp
+    time     timestamp,
+    views integer not null default 0,
+    allowed_authorizations text[],
+    location text
 );
 create table applications (
     userid  bigint primary key,
@@ -48,6 +51,15 @@ create table logs
     accessed timestamp not null,
     user_agent text not null,
     endpoint text not null,
+    authorized_user text,
+    response_code integer not null
+);
+create table cdn_logs (
+    image text not null,
+    restricted boolean not null,
+    remote text not null,
+    accessed timestamp not null,
+    user_agent text not null,
     authorized_user text,
     response_code integer not null
 );

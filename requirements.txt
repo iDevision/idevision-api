@@ -1,4 +1,5 @@
 asyncpg
+aiofiles
 aiohttp
 pytesseract
 prometheus_client

@@ -2,6 +2,7 @@ import random
 import io
 import datetime
 import string
+import mimetypes
 import os
 
 from aiohttp import web
@@ -22,9 +23,11 @@ async def post_media(request: utils.TypedRequest):
 
     reader = await request.multipart()
     data = await reader.next()
-    extension = data.filename.split(".").pop()
-    new_name = "".join([random.choice(CHOICES) for _ in range(8)]) + f".{extension}"
+    extension = mimetypes.guess_extension(data.filename)
+    new_name = "".join([random.choice(CHOICES) for _ in range(8)]) + extension
     buffer = io.FileIO(f"/var/www/idevision/media/{new_name}", mode="w")
+    allowed_auths = request.query.getall("authorization", None)
+
     while True:
         chunk = await data.read_chunk()
         if not chunk:
@@ -32,7 +35,10 @@ async def post_media(request: utils.TypedRequest):
         buffer.write(chunk)
 
     buffer.close()
-    await request.app.db.execute("INSERT INTO uploads VALUES ($1,$2,$3)", new_name, auth, datetime.datetime.utcnow())
+    await request.app.db.execute(
+        "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5)",
+        new_name, auth, datetime.datetime.utcnow(), allowed_auths, f"/var/www/idevision/media/{new_name}"
+    )
     request.app.last_upload = new_name
 
     return web.json_response({"url": "https://cdn.idevision.net/"+new_name}, status=200)
