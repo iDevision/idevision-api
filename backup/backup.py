@@ -25,4 +25,4 @@ async def catch_all_routes(_):
 
 app.add_routes(r)
 
-web.run_app(app, host="127.0.0.1", port=8334)
+web.run_app(app, host="127.0.0.1", port=8349)
