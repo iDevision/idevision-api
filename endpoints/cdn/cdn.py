@@ -35,7 +35,11 @@ async def post_media(request: utils.TypedRequest):
 
     async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
         # also i cant be asked to make a clientsession pool
-        async with session.post(url, data=request.content, headers={"Authorization": request.app.settings['slave_key']}) as resp:
+        async with session.post(url, data=request.content,
+                                headers={
+                                    "Authorization": request.app.settings['slave_key'],
+                                    "Content-Type": request.headers.get("Content-Type")
+                                }) as resp:
             if resp.status == 600:
                 return web.Response(status=400, text=await resp.text())
             elif 100 >= resp.status >= 300:
