@@ -31,10 +31,15 @@ async def post_node(request: utils.TypedRequest):
     ip = request.headers.get("X-Forwarded-For", None) or request.remote
 
     if not node:
-        data = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING node", ip, port)
-        request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
+        d = await request.app.db.fetchrow("SELECT node FROM slaves WHERE ip = $1", ip)
+        if d:
+            request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
+            return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=200)
 
-        return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=201) # we've made a new node or reauthed one that lost its numbering
+        data = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) RETURNING node", ip, port)
+        request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
+        return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=201) # we've made a new node
+
     else:
         data = await request.app.db.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
         if not data:
