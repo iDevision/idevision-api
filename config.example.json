@@ -2,5 +2,6 @@
     "db": "postgres://user:password@ip:port/database",
     "slave_key": "a random key",
     "master_site": "idevision.net",
-    "child_site": "cdn.idevision.net"
+    "child_site": "cdn.idevision.net",
+    "port": 8340
 }
