@@ -29,7 +29,7 @@ async def post_media(request: utils.TypedRequest):
 
     target = random.choice(list(options.keys()))
     target = options[target]
-    url = yarl.URL().with_host(target['ip']).with_port(target['port']).with_scheme("http")
+    url = yarl.URL(f"http://{target['ip']}").with_port(target['port'])
     # use http to directly access the backend, cuz it probably isnt behind nginx
 
     async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
