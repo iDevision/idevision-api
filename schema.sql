@@ -6,7 +6,8 @@ create table auths
     allowed_routes text[],
     active         boolean default true not null,
     discord_id     bigint,
-    ignores_ratelimits boolean not null default false
+    ignores_ratelimits boolean not null default false,
+    administrator boolean not null default false
 );
 create table uploads
 (
@@ -17,6 +18,7 @@ create table uploads
     allowed_authorizations text[],
     location text,
     node integer not null,
+    deleted boolean not null default false,
     PRIMARY KEY(key, node)
 );
 create table applications (
