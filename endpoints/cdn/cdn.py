@@ -3,6 +3,7 @@ import datetime
 import aiohttp
 import os
 import time
+import json
 import yarl
 
 from aiohttp import web
@@ -40,7 +41,9 @@ async def post_media(request: utils.TypedRequest):
             elif 100 >= resp.status >= 300:
                 return web.Response(status=500, text=await resp.text())
             else:
-                data = await resp.json()
+                data = await resp.text()
+                print(data)
+                data = json.loads(data)
                 new_name = data['name']
                 path = data['path']
                 node = data['node']
