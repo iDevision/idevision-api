@@ -54,7 +54,7 @@ async def post_media(request: utils.TypedRequest):
 
     await request.app.db.execute(
         "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5,$6)",
-        new_name, auth, datetime.datetime.utcnow(), node, allowed_auths, path
+        new_name, auth, datetime.datetime.utcnow(), allowed_auths, path, node
     )
     request.app.last_upload = new_name
 
