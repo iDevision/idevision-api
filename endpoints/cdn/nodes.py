@@ -31,10 +31,10 @@ async def post_node(request: utils.TypedRequest):
     ip = request.headers.get("X-Forwarded-For", None) or request.remote
 
     if not node:
-        d = await request.app.db.fetchrow("SELECT node FROM slaves WHERE ip = $1", ip)
+        d = await request.app.db.fetchval("SELECT node FROM slaves WHERE ip = $1", ip)
         if d:
-            request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
-            return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=200)
+            request.app.slaves[d] = {"ip": ip, "port": port, "signin": time.time()}
+            return web.json_response({"node": d, "port": port, "ip": ip}, status=200)
 
         data = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) RETURNING node", ip, port)
         request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
