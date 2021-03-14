@@ -36,9 +36,9 @@ async def post_node(request: utils.TypedRequest):
             request.app.slaves[d] = {"ip": ip, "port": port, "signin": time.time()}
             return web.json_response({"node": d, "port": port, "ip": ip}, status=200)
 
-        data = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) RETURNING node", ip, port)
-        request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
-        return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=201) # we've made a new node
+        d = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) RETURNING node", ip, port)
+        request.app.slaves[d['node']] = {"ip": ip, "port": port, "signin": time.time()}
+        return web.json_response({"node": d['node'], "port": port, "ip": ip}, status=201) # we've made a new node
 
     else:
         data = await request.app.db.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
@@ -46,4 +46,4 @@ async def post_node(request: utils.TypedRequest):
             return web.Response(status=400, text="Node mismatch")
 
         request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
-        return web.json_response({"node": node, "port": port, "ip": ip})
+        return web.json_response({"node": data['node'], "port": port, "ip": ip})
