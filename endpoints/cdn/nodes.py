@@ -31,12 +31,12 @@ async def post_node(request: utils.TypedRequest):
     ip = request.headers.get("X-Forwarded-For", None) or request.remote
 
     if not node:
-        data = await request.app.db.fetchval("INSERT INTO nodes (ip, port) VALUES ($1, $2) ON CONFLICT DO UPDATE SET ip = $1 RETURNING node", ip, port)
+        data = await request.app.db.fetchval("INSERT INTO slaves (ip, port) VALUES ($1, $2) ON CONFLICT DO UPDATE SET ip = $1 RETURNING node", ip, port)
         request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
 
         return web.json_response({"node": data['node'], "port": port, "ip": ip}, status=201) # we've made a new node or reauthed one that lost its numbering
     else:
-        data = await request.app.db.fetchrow("UPDATE nodes SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
+        data = await request.app.db.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
         if not data:
             return web.Response(status=400, text="Node mismatch")
 
