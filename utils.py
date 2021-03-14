@@ -13,9 +13,9 @@ async def get_authorization(request: "TypedRequest", authorization):
     if request.app.test:
         return "iamtomahawkx", ["*"]
 
-    resp = await request.app.db.fetchrow("SELECT username, allowed_routes FROM auths WHERE auth_key = $1 and active = true", authorization)
+    resp = await request.app.db.fetchrow("SELECT username, allowed_routes, administrator FROM auths WHERE auth_key = $1 and active = true", authorization)
     if resp is not None:
-        return resp['username'], resp['allowed_routes']
+        return resp['username'], resp['allowed_routes'], resp['administrator']
     return None, []
 
 def route_allowed(allowed_routes, route):

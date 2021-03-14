@@ -18,6 +18,7 @@ async def post_node(request: utils.TypedRequest):
     try:
         data = await request.json()
         port = int(data['port'])
+        name = data['name']
     except:
         return web.Response(status=400, text="Bad json")
 
@@ -31,19 +32,35 @@ async def post_node(request: utils.TypedRequest):
     ip = request.headers.get("X-Forwarded-For", None) or request.remote
 
     if not node:
-        d = await request.app.db.fetchval("SELECT node FROM slaves WHERE ip = $1", ip)
+        d = await request.app.db.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
         if d:
-            request.app.slaves[d] = {"ip": ip, "port": port, "signin": time.time()}
-            return web.json_response({"node": d, "port": port, "ip": ip}, status=200)
+            request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
+            return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
 
-        d = await request.app.db.fetchrow("INSERT INTO slaves (ip, port) VALUES ($1, $2) RETURNING node", ip, port)
-        request.app.slaves[d['node']] = {"ip": ip, "port": port, "signin": time.time()}
-        return web.json_response({"node": d['node'], "port": port, "ip": ip}, status=201) # we've made a new node
+        d = await request.app.db.fetchrow("""
+        INSERT INTO
+        slaves (name, ip, port)
+        VALUES
+        (
+            CASE
+                WHEN $1 IS NULL
+                    THEN 'node-'+ CAST(
+                        (SELECT COUNT(*) FROM slaves) AS text
+                    )
+                ELSE $1
+            END,
+            $2,
+            $3
+        )
+        RETURNING node, name
+        """, name, ip, port)
+        request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
+        return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
     else:
         data = await request.app.db.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
         if not data:
             return web.Response(status=400, text="Node mismatch")
 
-        request.app.slaves[data['node']] = {"ip": ip, "port": port, "signin": time.time()}
-        return web.json_response({"node": data['node'], "port": port, "ip": ip})
+        request.app.slaves[data['node']] = {"ip": ip, "port": port, "name": name, "id": data['node'], "signin": time.time()}
+        return web.json_response({"node": data['node'], "port": port, "name": name, "ip": ip})

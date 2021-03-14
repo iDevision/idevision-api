@@ -1,4 +1,10 @@
 create extension pg_trgm;
+create table slaves (
+    node serial primary key,
+    name text unique not null,
+    ip text unique not null,
+    port integer not null
+);
 create table auths
 (
     username       text primary key,
@@ -17,8 +23,9 @@ create table uploads
     views integer not null default 0,
     allowed_authorizations text[],
     location text,
-    node integer not null,
+    node text not null references slaves (node),
     deleted boolean not null default false,
+    size bigint,
     PRIMARY KEY(key, node)
 );
 create table applications (
@@ -66,9 +73,4 @@ create table cdn_logs (
     user_agent text not null,
     authorized_user text,
     response_code integer not null
-);
-create table slaves (
-    node serial primary key,
-    ip text unique not null,
-    port integer not null
 );

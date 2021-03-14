@@ -14,24 +14,44 @@ router = web.RouteTableDef()
 
 @router.post("/api/cdn/post")
 async def post_media(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/media/post"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/post"):
         return web.Response(text="401 Unauthorized", status=401)
 
     allowed_auths = request.query.getall("authorized", None)
+    target: str = request.query.get("node", None)
+    if target:
+        if target.isnumeric():
+            target: int = int(target)
+            if target not in request.app.slaves:
+                return web.Response(status=400, text="The specified node is not available")
 
-    t = time.time()
-    options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300}
-    if not options:
-        raise ValueError("Error: no nodes available")
+            target: dict = request.app.slaves[target]
+        else:
+            for _node in request.app.slaves.values():
+                if _node['name'].lower() == target.lower():
+                    target: dict = _node
+                    break
 
-    target = random.choice(list(options.keys()))
-    target = options[target]
+        if type(target) is str:
+            return web.Response(status=400, text="The specified node is not available")
+        elif time.time() - target['signin'] > 300:
+            return web.Response(status=400, text="The specified node is not available")
+
+    else:
+        t = time.time()
+        options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300}
+        if not options:
+            return web.Response(status=503, text="Error: no nodes available")
+
+        target = random.choice(list(options.keys()))
+        target = options[target]
+
     url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("create")
-    # use http to directly access the backend, cuz it probably isnt behind nginx
+        # use http to directly access the backend, cuz it probably isnt behind nginx
 
     async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
         # also i cant be asked to make a clientsession pool
@@ -50,32 +70,40 @@ async def post_media(request: utils.TypedRequest):
                 new_name = data['name']
                 path = data['path']
                 node = data['node']
+                size = data['size']
 
     await request.app.db.execute(
-        "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5,$6)",
-        new_name, auth, datetime.datetime.utcnow(), allowed_auths, path, node
+        "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5,$6,$7)",
+        new_name, auth, datetime.datetime.utcnow(), allowed_auths, path, node, size
     )
     request.app.last_upload = new_name
 
-    return web.json_response({"url": f"https://{request.app.settings['child_site']}/{node}/{new_name}", "slug": new_name, "name": new_name, "node": node}, status=200)
+    return web.json_response({
+        "url": f"https://{request.app.settings['child_site']}/{target['name']}/{new_name}",
+        "slug": new_name,
+        "name": new_name,
+        "node": target['name']
+    }, status=200)
 
 @router.delete("/api/cdn/images/{node}/{image}")
 async def delete_image(request: utils.TypedRequest):
     node = request.match_info.get("node")
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/images"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
         return web.Response(text="401 Unauthorized", status=401)
 
-    try:
-        if int(node) not in request.app.slaves:
-            return web.Response(status=400, text="Node is unavailable or does not exist")
-    except:
-        return web.Response(status=400, text="Expected an integer for value 'node'")
+    target = None
+    for n in request.app.slaves:
+        if node == n['name']:
+            target = n
 
-    if "*" in routes:
+    if target is None:
+        return web.Response(status=400, text="Node is unavailable or does not exist")
+
+    if admin:
         coro = request.app.db.fetchrow(
             "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 RETURNING *;",
             request.match_info.get("image"),
@@ -90,7 +118,7 @@ async def delete_image(request: utils.TypedRequest):
             auth
         )
     if not await coro:
-        if "*" in routes:
+        if admin:
             return web.Response(status=404)
 
         return web.Response(status=401, text="401 Unauthorized")
@@ -111,11 +139,11 @@ async def purge_user(request: utils.TypedRequest):
     return web.Response(status=501)
     # TODO
 
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/purge"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/purge"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -134,66 +162,87 @@ async def purge_user(request: utils.TypedRequest):
 
 @router.get("/api/cdn/stats")
 async def get_cdn_stats(request: utils.TypedRequest):
-    amount = await request.app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE deleted is false;")
+    amount = await request.app.db.fetchrow("SELECT "
+        "(SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount, "
+        "(SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount;")
 
     return web.json_response({
-        "upload_count": amount,
+        "upload_count": amount['allcount'],
+        "uploaded_today": amount['todaycount'],
         "last_upload": request.app.last_upload
     })
 
 @router.get("/api/cdn/list")
 async def get_cdn_list(request: utils.TypedRequest):
     return web.Response(status=501)
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    # TODO
+
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/list"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
         return web.Response(text="401 Unauthorized", status=401)
 
-    values = await request.app.db.fetch("SELECT key, node, username FROM uploads where deleted is false")
+    query = """
+    SELECT
+        key, node, slaves.name, username
+    FROM uploads
+    INNER JOIN slaves
+        ON slaves.node = uploads.node
+    WHERE deleted IS false
+    """
+    values = await request.app.db.fetch(query)
     resp = {}
     for rec in values:
         if rec['username'] in resp:
-            resp[rec['username']].append({"key": rec['key'], "node": rec['node']})
+            resp[rec['username']].append({"key": rec['key'], "node": rec['name']})
         else:
-            resp[rec['username']] = [{"key": rec['key'], "node": rec['node']}]
+            resp[rec['username']] = [{"key": rec['key'], "node": rec['name']}]
 
     return web.json_response(resp)
 
 @router.get("/api/cdn/images/{node}/{image}")
 async def get_upload_stats(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/images"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
         return web.Response(text="401 Unauthorized", status=401)
 
     key = request.match_info.get("key")
-    try:
-        node = int(request.match_info.get("node"))
-    except:
-        return web.Response(status=400, text="Expected an int for value 'node'")
+    node = request.match_info.get("node")
 
-    about = await request.app.db.fetchrow("SELECT * FROM uploads WHERE key = $1 AND node = $2 and deleted is false", key, node)
+    query = """
+    SELECT key, time, username, views, size, slaves.name
+    FROM uploads
+    INNER JOIN slaves
+        ON slaves.node = uploads.node
+    WHERE key = $1
+    AND node = (SELECT node FROM slaves WHERE name = $2)
+    AND deleted IS false
+    """
+    about = await request.app.db.fetchrow(query, key, node)
     if not about:
         return web.Response(status=404)
 
     return web.json_response({
-        "url": f"https://{request.app.settings['child_site']}/{about['node']}/{about['key']}",
+        "url": f"https://{request.app.settings['child_site']}/{about['name']}/{about['key']}",
         "timestamp": about['time'].timestamp(),
         "author": about['username'],
-        "views": about['views']
+        "views": about['views'],
+        "node": about['name'],
+        "size": about['size']
     })
 
 @router.get("/api/cdn/stats/user")
 async def get_user_stats(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/stats/user"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/users"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -210,14 +259,14 @@ async def get_user_stats(request: utils.TypedRequest):
 
 @router.get("/api/cdn/list/user/{user}")
 async def get_cdn_list(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/cdn/list/user"):
+    if not admin and not utils.route_allowed(routes, "api/cdn/users"):
         return web.Response(text="401 Unauthorized", status=401)
 
     usr = request.match_info.get("user", auth)
 
-    values = await request.app.db.fetch("SELECT key, node FROM uploads WHERE username = $1 AND deleted is false;", usr)
-    return web.json_response([{"key": rec['key'], "node": rec['node']} for rec in values])
+    values = await request.app.db.fetch("SELECT key, node, size FROM uploads WHERE username = $1 AND deleted is false ORDER BY time;", usr)
+    return web.json_response([{"key": rec['key'], "node": rec['node'], "size": rec['size']} for rec in values])

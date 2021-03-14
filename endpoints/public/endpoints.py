@@ -43,15 +43,10 @@ async def do_rtfs(request: utils.TypedRequest):
 @router.get("/api/public/rtfm")
 @ratelimit(3, 5)
 async def do_rtfm(request: utils.TypedRequest):
-    show_labels = request.query.get("show-labels", None)
-    if show_labels is None:
-        return web.Response(status=400, reason="Missing show-labels parameter")
-    show_labels = show_labels.lower() == "true"
+    show_labels = request.query.get("show-labels", "false").lower() == 'true'
 
-    label_labels = request.query.get("label-labels", None)
-    if label_labels is None:
-        return web.Response(status=400, reason="Missing label-labels parameter")
-    label_labels = label_labels.lower() == "true"
+    label_labels = request.query.get("label-labels", "false").lower() == "true"
+
     location = request.query.get("location", None)
     if location is None:
         return web.Response(status=400, reason="Missing location parameter (The URL of the documentation)")
@@ -67,12 +62,12 @@ async def do_rtfm(request: utils.TypedRequest):
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)
 async def do_ocr(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
         return web.Response(text=r, status=401)
 
-    if not utils.route_allowed(routes, "api/public/ocr"):
+    if not admin and not utils.route_allowed(routes, "api/public/ocr"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:

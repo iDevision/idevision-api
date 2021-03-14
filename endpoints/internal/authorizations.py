@@ -10,11 +10,11 @@ router = web.RouteTableDef()
 
 @router.post("/api/internal/users/apply")
 async def apply(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:
@@ -40,11 +40,11 @@ async def apply(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/accept")
 async def accept_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:
@@ -67,11 +67,11 @@ async def accept_user(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/deny")
 async def deny_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:
@@ -100,7 +100,7 @@ async def deny_user(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/token")
 async def generate_token(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
@@ -127,11 +127,11 @@ async def generate_token(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/manage")
 async def add_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -144,11 +144,11 @@ async def add_user(request: utils.TypedRequest):
 
 @router.delete("/api/internal/users/manage")
 async def remove_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -165,11 +165,11 @@ async def remove_user(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/deauth")
 async def deauth_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -183,11 +183,11 @@ async def deauth_user(request: utils.TypedRequest):
 
 @router.post("/api/internal/users/auth")
 async def auth_user(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/users/manage"):
+    if not admin and not utils.route_allowed(routes, "api/internal/users/manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
@@ -200,11 +200,11 @@ async def auth_user(request: utils.TypedRequest):
 
 @router.get("/api/bans")
 async def get_bans(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/bans"):
+    if not admin and not utils.route_allowed(routes, "api/internal/bans"):
         return web.Response(text="401 Unauthorized", status=401)
 
     ip = request.query.get("ip")
@@ -231,11 +231,11 @@ async def get_bans(request: utils.TypedRequest):
 
 @router.post("/api/internal/bans")
 async def create_ban(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/internal/bans"):
+    if not admin and not utils.route_allowed(routes, "api/internal/bans"):
         return web.Response(text="401 Unauthorized", status=401)
 
     ip = request.query.get("ip")
