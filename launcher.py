@@ -102,70 +102,6 @@ async def usercontent_upload(request: utils.TypedRequest):
 
     return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
 
-@router.get("/api/bots/stats")
-async def get_bot_stats(_):
-    response = {}
-    for bot, d in app.bot_stats.items():
-        response[bot] = {
-            "metrics": d['metrics'],
-            "ramusage": d['ram_usage'],
-            "online": d['online'],
-            "usercount": d['user_count'],
-            "guildcount": d['guild_count'],
-            "latency": d['latency'],
-            "updated_at": d['last_post'].timestamp()
-        }
-
-    return web.json_response(response, status=200)
-
-@router.get("/metrics")
-async def get_metrics(_):
-    data = prometheus_client.generate_latest()
-    resp = web.Response(body=data, headers={"Content-type": prometheus_client.CONTENT_TYPE_LATEST})
-    return resp
-
-@router.post("/api/bots/updates")
-async def post_bot_stats(request: utils.TypedRequest):
-    payload = {
-        "metrics": {
-            "GUILD_CREATE": 0,
-            "MESSAGE_CREATE": 0 # etc
-        },
-        "usercount": 0,
-        "guildcount": 0,
-        "ramusage": 300, # in mb
-        "latency": 99 # in ms
-    }
-    token = request.headers.get("Authorization")
-    auth, _ = await utils.get_authorization(request, token)
-    if not auth or not token.startswith("bot."):
-        return web.Response(status=401, text="401 Unauthorized")
-
-    data = await request.json()
-
-    app.bot_stats[auth] = {
-        "last_post": datetime.datetime.utcnow(),
-        "metrics": {x: 0 for x in metrics},
-        "ram_usage": data.get("ramusage", 0),
-        "latency": data.get("latency", 0),
-        "online": True,
-        "user_count": data.get("usercount", 0),
-        "guild_count": data.get("guildcount", 0)
-        }
-
-    for metric, val in data['metrics'].items():
-        app.prometheus['websocket_events'].labels(event=metric, bot=auth).inc(
-            max(val - app.prometheus['websocket_events'].labels(event=metric, bot=auth)._value.get(), 0)) # noqa
-
-    d = app.prometheus
-    d["counts"].labels(count="users", bot=auth).set(data['usercount'])
-    d['counts'].labels(count="guilds", bot=auth).set(data['guildcount'])
-    d['online'].labels(bot=auth).info({"state": "Online"})
-    d['latency'].labels(count="latency", bot=auth).set(data['latency'])
-    d['ram_usage'].labels(count="ram", bot=auth).set(data['ramusage'])
-
-    return web.Response(status=204)
-
 
 @router.post("/api/git/checks")
 async def git_checks(request: utils.TypedRequest):
@@ -178,62 +114,6 @@ async def git_checks(request: utils.TypedRequest):
         request.app.stop()
 
     return web.Response()
-
-@router.post("/api/home/urls")
-async def home_urls(request: utils.TypedRequest):
-    auth, _ = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    user = data['user']
-    displayname = data['display_name']
-
-    link1 = data['link1'], data['link1_name']
-    link2 = data['link2'], data['link2_name']
-    link3 = data['link3'], data['link3_name']
-    link4 = data['link4'], data['link4_name']
-
-    await app.db.execute("""INSERT INTO homepages VALUES ($1, $10, $2, $3, $4, $5, $6, $7, $8, $9)
-    ON CONFLICT (username) DO UPDATE SET 
-    display_name = $10,
-    link1 = $2, link1_name = $3,
-    link2 = $4, link2_name = $5,
-    link3 = $6, link3_name = $7,
-    link4 = $8, link4_name = $9
-    """, user, *link1, *link2, *link3, *link4, displayname)
-
-    return web.Response(status=204)
-
-@router.get("/homepage")
-@aiohttp_jinja2.template("homepage.html")
-async def home(request: web.Request):
-    usr = request.query.get("user", "Unknown")
-    row = await app.db.fetchrow("SELECT * FROM homepages WHERE username = $1", usr)
-    if not row:
-        return {
-            "name": "Unknown",
-            "link1": "https://duckduckgo.com",
-            "link2": "https://duckduckgo.com",
-            "link3": "https://duckduckgo.com",
-            "link4": "https://duckduckgo.com",
-            "link1name": "DuckDuckGo",
-            "link2name": "DuckDuckGo",
-            "link3name": "DuckDuckGo",
-            "link4name": "DuckDuckGo",
-        }
-
-    return {
-        "name": row['display_name'],
-        "link1": row['link1'],
-        "link2": row['link2'],
-        "link3": row['link3'],
-        "link4": row['link4'],
-        "link1name": row['link1_name'],
-        "link2name": row['link2_name'],
-        "link3name": row['link3_name'],
-        "link4name": row['link4_name'],
-    }
 
 @router.get("/")
 async def home(_):

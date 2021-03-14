@@ -10,12 +10,14 @@ create table auths
 );
 create table uploads
 (
-    key      text,
+    key      text not null,
     username text references auths (username) ON DELETE CASCADE,
     time     timestamp,
     views integer not null default 0,
     allowed_authorizations text[],
-    location text
+    location text,
+    node integer not null,
+    PRIMARY KEY(key, node)
 );
 create table applications (
     userid  bigint primary key,
@@ -62,4 +64,9 @@ create table cdn_logs (
     user_agent text not null,
     authorized_user text,
     response_code integer not null
+);
+create table slaves (
+    node serial primary key,
+    ip text unique not null,
+    port integer not null
 );

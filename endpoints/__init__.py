@@ -1,6 +1,6 @@
-from .public import endpoints as public
-from . import internal
+from . import internal, cdn, public
 
 def setup(app):
-    app.add_routes(public.router)
     internal.setup(app)
+    cdn.setup(app)
+    public.setup(app)

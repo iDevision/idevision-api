@@ -1,9 +1,9 @@
 import sys
-import datetime
 import asyncio
+import json
+import pathlib
 from typing import Callable, Optional
 
-import prometheus_client
 import asyncpg
 from aiohttp import web
 
@@ -33,17 +33,18 @@ class App(web.Application):
         super().__init__(*args, **kwargs, middlewares=[shuttingdown_middleware])
         self._loop = asyncio.get_event_loop()
         self.last_upload = None
-        self.prometheus = {
-            "counts": prometheus_client.Gauge("bot_data", "Guilds that the bot has", labelnames=["count", "bot"]),
-            "websocket_events": prometheus_client.Counter("bot_events", "bot's metrics", labelnames=['event', "bot"]),
-            "latency": prometheus_client.Gauge("bot_latency", "bot's latency", labelnames=["count", "bot"]),
-            "ram_usage": prometheus_client.Gauge("bot_ram", "How much ram the bot is using", labelnames=["count", "bot"]),
-            "online": prometheus_client.Info("bot_online", "the bot's status", labelnames=["bot"]),
-        }
-        self.bot_stats = {}
         self.on_startup.append(self.async_init)
         self.test = test
         self._closing = False
+
+        p = pathlib.Path("config.json")
+        if not p.exists():
+            raise RuntimeError("The config.json file was not found, aborting master boot.")
+
+        with p.open() as f:
+            self.settings = json.load(f)
+
+        self.slaves = {}
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -53,15 +54,28 @@ class App(web.Application):
         if test:
             pass
         else:
-            self.db: asyncpg.Pool = await asyncpg.create_pool("postgresql://tom:tom@127.0.0.1:5432/idevision")
+            try:
+                self.db: asyncpg.Pool = await asyncpg.create_pool(self.settings['db'])
+            except:
+                self.stop()
+                raise RuntimeError("Failed to connect to the database")
+
             self._task = self._loop.create_task(self.offline_task())
+
+        p = pathlib.Path("backup/defaults.json")
+        if p.exists():
+            with p.open() as f:
+                with open("backup/message.json", "w") as msg:
+                    msg.write(f.read())
+        else:
+            with open("backup/message.json", "w") as msg:
+                json.dump({
+                    "message": "The Idevision website is currently offline due to an unknown error.",
+                    "status": 503
+                }, msg)
 
     async def offline_task(self):
         while True:
-            for bname, bot in self.bot_stats.items():
-                if bot['last_post'] is None or (datetime.datetime.utcnow() - bot['last_post']).total_seconds() > 120:
-                    self.prometheus['online'].labels(bot=bname).info({"state": "Offline"})
-
             await asyncio.shield(self.db.execute("DELETE FROM bans WHERE expires is not null and expires <= (now() at time zone 'utc')"), loop=self._loop)
             await asyncio.sleep(120)
 
@@ -69,8 +83,16 @@ class App(web.Application):
         self._closing = True
         async def _stop():
             await asyncio.sleep(3) # finish up pending requests
-            self._task.cancel()
+            try:
+                self._task.cancel()
+            except: pass
             self._loop.stop()
+
+            with open("backup/message.json") as f:
+                json.dump({
+                    "message": "The service is currently restarting. Try again in 30 seconds.",
+                    "status": 503
+                }, f)
 
         self._loop.create_task(_stop())
 

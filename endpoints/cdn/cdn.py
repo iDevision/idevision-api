@@ -1,16 +1,15 @@
 import random
-import io
 import datetime
-import string
-import mimetypes
+import aiohttp
 import os
+import time
+import yarl
 
 from aiohttp import web
 
 import utils
 
 router = web.RouteTableDef()
-CHOICES = string.digits + string.ascii_letters
 
 @router.post("/api/media/post")
 async def post_media(request: utils.TypedRequest):
@@ -21,23 +20,34 @@ async def post_media(request: utils.TypedRequest):
     if not utils.route_allowed(routes, "api/media/post"):
         return web.Response(text="401 Unauthorized", status=401)
 
-    reader = await request.multipart()
-    data = await reader.next()
-    extension = mimetypes.guess_extension(data.filename)
-    new_name = "".join([random.choice(CHOICES) for _ in range(8)]) + extension
-    buffer = io.FileIO(f"/var/www/idevision/media/{new_name}", mode="w")
-    allowed_auths = request.query.getall("authorization", None)
+    allowed_auths = request.query.getall("authorized", None)
 
-    while True:
-        chunk = await data.read_chunk()
-        if not chunk:
-            break
-        buffer.write(chunk)
+    t = time.time()
+    options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300}
+    if not options:
+        raise ValueError("Error: no nodes available")
 
-    buffer.close()
+    target = random.choice(list(options.keys()))
+    target = options[target]
+    url = yarl.URL().with_host(target['ip']).with_port(target['port']).with_scheme("http")
+    # use http to directly access the backend, cuz it probably isnt behind nginx
+
+    async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
+        # also i cant be asked to make a clientsession pool
+        async with session.post(url, data=request.content, headers={"Authorization": request.app.settings['slave_key']}) as resp:
+            if resp.status == 600:
+                return web.Response(status=400, text=await resp.text())
+            elif 100 >= resp.status >= 300:
+                return web.Response(status=500, text=await resp.text())
+            else:
+                data = await resp.json()
+                new_name = data['name']
+                path = data['path']
+                node = data['node']
+
     await request.app.db.execute(
-        "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5)",
-        new_name, auth, datetime.datetime.utcnow(), allowed_auths, f"/var/www/idevision/media/{new_name}"
+        "INSERT INTO uploads VALUES ($1,$2,$3,$4,$5,$6)",
+        new_name, auth, datetime.datetime.utcnow(), node, allowed_auths, path
     )
     request.app.last_upload = new_name
 

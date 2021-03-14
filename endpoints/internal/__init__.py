@@ -1,5 +1,4 @@
-from . import cdn, authorizations
+from . import authorizations
 
 def setup(app):
-    app.add_routes(cdn.router)
     app.add_routes(authorizations.router)
