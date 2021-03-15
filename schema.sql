@@ -2,8 +2,9 @@ create extension pg_trgm;
 create table slaves (
     node serial primary key,
     name text unique not null,
-    ip text unique not null,
-    port integer not null
+    ip text not null,
+    port integer not null,
+    UNIQUE (ip, port)
 );
 create table auths
 (
