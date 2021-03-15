@@ -19,7 +19,9 @@ async def post_node(request: utils.TypedRequest):
         data = await request.json()
         port = int(data['port'])
         name = data['name']
-    except:
+        new = data.get("new", False)
+    except Exception as e:
+        print(e)
         return web.Response(status=400, text="Bad json")
 
     node = data.get("node", None)
@@ -31,11 +33,12 @@ async def post_node(request: utils.TypedRequest):
 
     ip = request.headers.get("X-Forwarded-For", None) or request.remote
 
-    if not node:
-        d = await request.app.db.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
-        if d:
-            request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
-            return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
+    if not node or new:
+        if not new:
+            d = await request.app.db.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
+            if d:
+                request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
+                return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
 
         d = await request.app.db.fetchrow("""
         INSERT INTO
