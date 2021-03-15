@@ -47,9 +47,7 @@ async def post_node(request: utils.TypedRequest):
         (
             CASE
                 WHEN $1 IS NULL
-                    THEN CAST('node-' AS text) + CAST(
-                        (SELECT COUNT(*) FROM slaves) AS text
-                    )
+                    THEN 'node-' || (SELECT COUNT(*) FROM slaves)
                 ELSE $1
             END,
             $2,
