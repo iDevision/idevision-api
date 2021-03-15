@@ -70,5 +70,5 @@ async def post_node(request: utils.TypedRequest):
         if not data:
             return web.Response(status=400, text="Node mismatch")
 
-        request.app.slaves[data['node']] = {"ip": ip, "port": port, "name": name, "id": data['node'], "signin": time.time()}
-        return web.json_response({"node": data['node'], "port": port, "name": name, "ip": ip})
+        request.app.slaves[data['node']] = {"ip": ip, "port": port, "name": data['name'], "id": data['node'], "signin": time.time()}
+        return web.json_response({"node": data['node'], "port": port, "name": data['name'], "ip": ip})
