@@ -55,13 +55,13 @@ async def post_node(request: utils.TypedRequest):
             VALUES
             (
                 'node-' || (SELECT COUNT(*) FROM slaves),
-                $2,
-                $3
+                $1,
+                $2
             )
             RETURNING node, name
             """
 
-        d = await request.app.db.fetchrow(query, name, ip, port)
+        d = await request.app.db.fetchrow(query, ip, port)
         request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
