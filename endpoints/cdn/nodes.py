@@ -40,21 +40,28 @@ async def post_node(request: utils.TypedRequest):
                 request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
                 return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
 
-        d = await request.app.db.fetchrow("""
-        INSERT INTO
-        slaves (name, ip, port)
-        VALUES
-        (
-            CASE
-                WHEN $1 IS NULL
-                    THEN 'node-' || (SELECT COUNT(*) FROM slaves)
-                ELSE $1
-            END,
-            $2,
-            $3
-        )
-        RETURNING node, name
-        """, name, ip, port)
+        if name is not None:
+            query = """
+            INSERT INTO
+            slaves (name, ip, port)
+            VALUES
+            ($1, $2, $3)
+            RETURNING node, name
+            """
+        else:
+            query = """
+            INSERT INTO
+            slaves (name, ip, port)
+            VALUES
+            (
+                'node-' || (SELECT COUNT(*) FROM slaves),
+                $2,
+                $3
+            )
+            RETURNING node, name
+            """
+
+        d = await request.app.db.fetchrow(query, name, ip, port)
         request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
