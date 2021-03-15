@@ -23,7 +23,7 @@ async def post_media(request: utils.TypedRequest):
 
     allowed_auths = request.query.getall("authorized", None)
     target: str = request.query.get("node", None)
-    if target:
+    if target and admin:
         if target.isnumeric():
             target: int = int(target)
             if target not in request.app.slaves:
@@ -43,7 +43,7 @@ async def post_media(request: utils.TypedRequest):
 
     else:
         t = time.time()
-        options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300}
+        options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300 and y['name'] not in request.app.settings['slave_no_balancing']}
         if not options:
             return web.Response(status=503, text="Error: no nodes available")
 

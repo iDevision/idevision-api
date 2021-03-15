@@ -3,5 +3,8 @@
     "slave_key": "a random key",
     "master_site": "idevision.net",
     "child_site": "cdn.idevision.net",
-    "port": 8340
+    "port": 8340,
+
+    "_note_slave_no_balancing": "put slaves that you don't want to be included in load balancing. You can still manually specify them if you are a site admin.",
+    "slave_no_balancing": []
 }
