@@ -23,7 +23,7 @@ create table uploads
     views integer not null default 0,
     allowed_authorizations text[],
     location text,
-    node text not null references slaves (node),
+    node integer not null references slaves (node),
     deleted boolean not null default false,
     size bigint,
     PRIMARY KEY(key, node)
