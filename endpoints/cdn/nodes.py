@@ -54,7 +54,7 @@ async def post_node(request: utils.TypedRequest):
             slaves (name, ip, port)
             VALUES
             (
-                'node-' || (SELECT COUNT(*) FROM slaves),
+                'node-' || ((SELECT COUNT(*) FROM slaves)+1),
                 $1,
                 $2
             )
