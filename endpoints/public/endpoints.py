@@ -67,7 +67,7 @@ async def do_ocr(request: utils.TypedRequest):
         r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
         return web.Response(text=r, status=401)
 
-    if not admin and not utils.route_allowed(routes, "api/public/ocr"):
+    if not admin and not utils.route_allowed(routes, "public.ocr"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:

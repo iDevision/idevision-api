@@ -12,18 +12,30 @@ import utils
 
 router = web.RouteTableDef()
 
-@router.post("/api/cdn/post")
+@router.get("/api/cdn")
+async def get_cdn_stats(request: utils.TypedRequest):
+    amount = await request.app.db.fetchrow("SELECT "
+        "(SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount, "
+        "(SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount;")
+
+    return web.json_response({
+        "upload_count": amount['allcount'],
+        "uploaded_today": amount['todaycount'],
+        "last_upload": request.app.last_upload
+    })
+
+@router.post("/api/cdn")
 async def post_media(request: utils.TypedRequest):
     auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not admin and not utils.route_allowed(routes, "api/cdn/post"):
+    if not admin and not utils.route_allowed(routes, "cdn.upload"):
         return web.Response(text="401 Unauthorized", status=401)
 
     allowed_auths = request.query.getall("authorized", None)
     target: str = request.query.get("node", None)
-    if target and admin:
+    if target and (utils.route_allowed(routes, "users.manage") or admin):
         if target.isnumeric():
             target: int = int(target)
             if target not in request.app.slaves:
@@ -85,130 +97,13 @@ async def post_media(request: utils.TypedRequest):
         "node": target['name']
     }, status=200)
 
-@router.delete("/api/cdn/images/{node}/{image}")
-async def delete_image(request: utils.TypedRequest):
-    node = request.match_info.get("node")
-    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    target = None
-    for n in request.app.slaves:
-        if node == n['name']:
-            target = n
-
-    if target is None:
-        return web.Response(status=400, text="Node is unavailable or does not exist")
-
-    if admin:
-        coro = request.app.db.fetchrow(
-            "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 RETURNING *;",
-            request.match_info.get("image"),
-            node
-        )
-
-    else:
-        coro = request.app.db.fetchrow(
-            "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 AND username = $3 RETURNING *;",
-            request.match_info.get("image"),
-            node,
-            auth
-        )
-    if not await coro:
-        if admin:
-            return web.Response(status=404)
-
-        return web.Response(status=401, text="401 Unauthorized")
-
-    target = request.app.slaves[node]
-    url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("delete")
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-                url,
-                text=request.match_info.get("image"),
-                headers={"Authorization": request.app.settings['slave_key']}
-        ) as resp:
-            return web.Response(status=resp.status)
-
-@router.delete("/api/cdn/purge")
-async def purge_user(request: utils.TypedRequest):
-    return web.Response(status=501)
-    # TODO
-
-    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not admin and not utils.route_allowed(routes, "api/cdn/purge"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    data = await request.json()
-    usr = data.get("username")
-    if request.app.test:
-        return web.Response(status=204)
-
-    data = await request.app.db.fetch("UPDATE uploads SET deleted = true WHERE username = $1 RETURNING *;", usr)
-    if not data:
-        return web.Response(status=400, reason="User not found/no images to delete")
-
-    for row in data:
-        os.remove("/var/www/idevision/cdn/" + row['key'])
-
-    return web.Response()
-
-@router.get("/api/cdn/stats")
-async def get_cdn_stats(request: utils.TypedRequest):
-    amount = await request.app.db.fetchrow("SELECT "
-        "(SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount, "
-        "(SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount;")
-
-    return web.json_response({
-        "upload_count": amount['allcount'],
-        "uploaded_today": amount['todaycount'],
-        "last_upload": request.app.last_upload
-    })
-
-@router.get("/api/cdn/list")
-async def get_cdn_list(request: utils.TypedRequest):
-    return web.Response(status=501)
-    # TODO
-
-    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    query = """
-    SELECT
-        key, node, slaves.name, username
-    FROM uploads
-    INNER JOIN slaves
-        ON slaves.node = uploads.node
-    WHERE deleted IS false
-    """
-    values = await request.app.db.fetch(query)
-    resp = {}
-    for rec in values:
-        if rec['username'] in resp:
-            resp[rec['username']].append({"key": rec['key'], "node": rec['name']})
-        else:
-            resp[rec['username']] = [{"key": rec['key'], "node": rec['name']}]
-
-    return web.json_response(resp)
-
-@router.get("/api/cdn/images/{node}/{image}")
+@router.get("/api/cdn/{node}/{image}")
 async def get_upload_stats(request: utils.TypedRequest):
     auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not admin and not utils.route_allowed(routes, "api/cdn/images"):
+    if not admin and not utils.route_allowed(routes, "cdn"):
         return web.Response(text="401 Unauthorized", status=401)
 
     key = request.match_info.get("key")
@@ -236,19 +131,139 @@ async def get_upload_stats(request: utils.TypedRequest):
         "size": about['size']
     })
 
-@router.get("/api/cdn/stats/user")
+
+@router.delete("/api/cdn/{node}/{image}")
+async def delete_image(request: utils.TypedRequest):
+    node = request.match_info.get("node")
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not admin and not utils.route_allowed(routes, "cdn.upload"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    target = None
+    for n in request.app.slaves:
+        if node == n['name']:
+            target = n
+
+    if target is None:
+        return web.Response(status=400, text="Node is unavailable or does not exist")
+
+    if admin or utils.route_allowed(routes, "cdn.manage"):
+        coro = request.app.db.fetchrow(
+            "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 RETURNING *;",
+            request.match_info.get("image"),
+            node
+        )
+
+    else:
+        coro = request.app.db.fetchrow(
+            "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 AND username = $3 RETURNING *;",
+            request.match_info.get("image"),
+            node,
+            auth
+        )
+    if not await coro:
+        if admin or utils.route_allowed(routes, "cdn.manage"):
+            return web.Response(status=404)
+
+        return web.Response(status=401, text="401 Unauthorized")
+
+    target = request.app.slaves[node]
+    url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("delete")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+                url,
+                text=request.match_info.get("image"),
+                headers={"Authorization": request.app.settings['slave_key']}
+        ) as resp:
+            return web.Response(status=resp.status)
+
+@router.post("/api/cdn/purge")
+async def purge_user(request: utils.TypedRequest):
+    return web.Response(status=501)
+    # TODO
+
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not admin and not utils.route_allowed(routes, "cdn.manage"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    data = await request.json()
+    usr = data.get("username")
+    if request.app.test:
+        return web.Response(status=204)
+
+    data = await request.app.db.fetch("UPDATE uploads SET deleted = true WHERE username = $1 RETURNING *;", usr)
+    if not data:
+        return web.Response(status=400, reason="User not found/no images to delete")
+
+    for row in data:
+        os.remove("/var/www/idevision/cdn/" + row['key'])
+
+    return web.Response()
+
+@router.get("/api/cdn/list")
+async def get_cdn_list(request: utils.TypedRequest):
+    return web.Response(status=501)
+    # TODO
+
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    if not admin and not utils.route_allowed(routes, "cdn.manage"):
+        raise web.HTTPFound("/api/cdn/list/"+auth)
+
+    query = """
+    SELECT
+        key, node, slaves.name, username
+    FROM uploads
+    INNER JOIN slaves
+        ON slaves.node = uploads.node
+    WHERE deleted IS false
+    """
+    values = await request.app.db.fetch(query)
+    resp = {}
+    for rec in values:
+        if rec['username'] in resp:
+            resp[rec['username']].append({"key": rec['key'], "node": rec['name']})
+        else:
+            resp[rec['username']] = [{"key": rec['key'], "node": rec['name']}]
+
+    return web.json_response(resp)
+
+@router.get("/api/cdn/list/{user}")
+async def get_cdn_list(request: utils.TypedRequest):
+    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
+    if not auth:
+        return web.Response(text="401 Unauthorized", status=401)
+
+    usr = request.match_info.get("user", auth)
+
+    if usr != auth and not admin and not utils.route_allowed(routes, "cdn.manage"):
+        return web.Response(text="401 Unauthorized", status=401)
+
+    values = await request.app.db.fetch("SELECT key, node, size FROM uploads WHERE username = $1 AND deleted is false ORDER BY time;", usr)
+    return web.json_response([{"key": rec['key'], "node": rec['node'], "size": rec['size']} for rec in values])
+
+@router.get("/api/cdn/user")
 async def get_user_stats(request: utils.TypedRequest):
     auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
-    if not admin and not utils.route_allowed(routes, "api/cdn/users"):
+    usr = request.query.get("username", auth)
+
+    if usr != auth and not admin and not utils.route_allowed(routes, "cdn.manage"):
         return web.Response(text="401 Unauthorized", status=401)
 
-    data = await request.json()
-
-    amount = await request.app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1 and deleted is false", data['username'])
-    recent = await request.app.db.fetchrow("SELECT key, node FROM uploads WHERE username = $1 and deleted is false ORDER BY time DESC", data['username'])
+    amount = await request.app.db.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1 and deleted is false", usr)
+    recent = await request.app.db.fetchrow("SELECT key, node FROM uploads WHERE username = $1 and deleted is false ORDER BY time DESC", usr)
     if not amount and not recent:
         return web.Response(status=400, reason="User not found/no entries")
 
@@ -256,17 +271,3 @@ async def get_user_stats(request: utils.TypedRequest):
         "upload_count": amount,
         "last_upload": f"https://{request.app.settings['child_site']}/{recent['node']}/{recent['key']}"
     })
-
-@router.get("/api/cdn/list/user/{user}")
-async def get_cdn_list(request: utils.TypedRequest):
-    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
-    if not admin and not utils.route_allowed(routes, "api/cdn/users"):
-        return web.Response(text="401 Unauthorized", status=401)
-
-    usr = request.match_info.get("user", auth)
-
-    values = await request.app.db.fetch("SELECT key, node, size FROM uploads WHERE username = $1 AND deleted is false ORDER BY time;", usr)
-    return web.json_response([{"key": rec['key'], "node": rec['node'], "size": rec['size']} for rec in values])

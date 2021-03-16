@@ -89,3 +89,8 @@ Response 200
     "data": "Content here"
 }
 ```
+<br><br><br>
+legal crap:\
+I reserve the right to deny access of anyone to this service at any time, for any reason.\
+I reserve the right to remove images from the cdn at any time, for any reason.\
+By using this service, you agree that I may collect usage info, 
