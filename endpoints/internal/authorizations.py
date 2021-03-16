@@ -21,6 +21,12 @@ async def get_user(request: utils.TypedRequest):
         username = request.query.get("username", None)
         discord_id = request.query.get("discordid", None)
 
+    if discord_id:
+        try:
+            discord_id = int(discord_id)
+        except:
+            return web.Response(status=400, text="Expected an integer for discordid")
+
     if not admin and not utils.route_allowed(routes, "users"):
         return web.Response(text="401 Unauthorized", status=401)
 
