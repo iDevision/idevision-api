@@ -1,7 +1,8 @@
 import time
 
+import asyncpg
 from aiohttp import web
-import utils
+from utils import ratelimit, utils
 
 router = web.RouteTableDef()
 
@@ -9,7 +10,8 @@ def setup(app):
     app.add_routes(router)
 
 @router.post("/api/cdn/nodes")
-async def post_node(request: utils.TypedRequest):
+@ratelimit.ratelimit(20, 1)
+async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
     if "Authorization" not in request.headers:
         return web.Response(status=401, text="Unauthorized")
 
@@ -35,7 +37,7 @@ async def post_node(request: utils.TypedRequest):
 
     if not node or new:
         if not new:
-            d = await request.app.db.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
+            d = await conn.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
             if d:
                 request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
                 return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
@@ -61,12 +63,12 @@ async def post_node(request: utils.TypedRequest):
             RETURNING node, name
             """
 
-        d = await request.app.db.fetchrow(query, ip, port)
+        d = await conn.fetchrow(query, ip, port)
         request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
     else:
-        data = await request.app.db.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
+        data = await conn.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
         if not data:
             return web.Response(status=400, text="Node mismatch")
 

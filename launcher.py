@@ -1,6 +1,5 @@
 from aiohttp import web
 import datetime
-import prometheus_client
 import aiohttp_jinja2
 import jinja2
 import os
@@ -10,7 +9,7 @@ import subprocess
 subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
 
 import endpoints
-import utils
+from utils import utils
 
 uptime = datetime.datetime.utcnow()
 test = "--unittest" in sys.argv
@@ -117,7 +116,7 @@ async def git_checks(request: utils.TypedRequest):
 
 @router.get("/")
 async def home(_):
-    return web.FileResponse("index.html")
+    return web.FileResponse("static/index.html")
 
 @router.get("/robots.txt")
 async def robots(_):
@@ -127,11 +126,11 @@ async def robots(_):
 async def favicon(_):
     return web.FileResponse("static/favicon.ico")
 
-router.static("/vendor", "vendor")
-router.static("/images", "images")
-router.static("/fonts", "fonts")
-router.static("/css", "css")
-router.static("/js", "js")
+router.static("/vendor", "static/vendor")
+router.static("/images", "static/images")
+router.static("/fonts", "static/fonts")
+router.static("/css", "static/css")
+router.static("/js", "static/js")
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./'))
 app.add_routes(router)

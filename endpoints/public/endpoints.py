@@ -2,15 +2,16 @@ import pathlib
 import uuid
 import os
 
+import asyncpg
 from yarl import URL
 from aiohttp import web
 
-from ratelimit import ratelimit
+from utils.ratelimit import ratelimit
 from .rtfm import DocReader
 from .rtfs import Index
 from . import ocr
 
-import utils
+from utils import utils
 
 import twitchio, discord, wavelink
 
@@ -28,7 +29,7 @@ router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
 @ratelimit(3, 5)
-async def do_rtfs(request: utils.TypedRequest):
+async def do_rtfs(request: utils.TypedReques, _: asyncpg.Connection):
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
@@ -42,7 +43,7 @@ async def do_rtfs(request: utils.TypedRequest):
 
 @router.get("/api/public/rtfm")
 @ratelimit(3, 5)
-async def do_rtfm(request: utils.TypedRequest):
+async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
     show_labels = request.query.get("show-labels", "false").lower() == 'true'
 
     label_labels = request.query.get("label-labels", "false").lower() == "true"
@@ -61,13 +62,13 @@ async def do_rtfm(request: utils.TypedRequest):
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)
-async def do_ocr(request: utils.TypedRequest):
-    auth, routes, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
+async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
+    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
         return web.Response(text=r, status=401)
 
-    if not admin and not utils.route_allowed(routes, "public.ocr"):
+    if not admin and not utils.route_allowed(perms, "public.ocr"):
         return web.Response(text="401 Unauthorized", status=401)
 
     try:
@@ -82,7 +83,7 @@ async def do_ocr(request: utils.TypedRequest):
         return web.Response(status=400, text="Invalid/No filename provided")
 
     name = ('%032x' % uuid.uuid4().int)[:8] + "." + extension
-    pth = pathlib.Path(f"/var/www/idevision/tmp/{name}")
+    pth = pathlib.Path(f"../tmp/{name}")
     buffer = pth.open("wb")
     while True:
         try:

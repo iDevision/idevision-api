@@ -36,17 +36,26 @@ class Mapping(CooldownMapping):
 
         return None, None
 
-_DEFAULT_DICT = {'reason': None, "login": None, "ignores_ratelimits": False, "active": None}
+_DEFAULT_DICT = {
+    'reason': None,
+    "username": None,
+    "ignores_ratelimits": False,
+    "active": None,
+    "administrator": False,
+    "permissions": {}
+}
 
 class Ratelimiter:
-    def __init__(self, rate: int, per: int, callback):
+    __slots__ = "rate", "per", "ignore_perm", "cb", "map", "autoban", "auth_map", "auth_autoban"
+    def __init__(self, rate: int, per: int, callback, ignore_perms: str=None):
         self.rate = rate
         self.per = per
+        self.ignore_perm = ignore_perms
         self.cb = callback
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
         self.autoban = Mapping.from_cooldown(rate*2, per, Bucket2.default)
         self.auth_map = Mapping.from_cooldown(rate*2, per, Bucket2.user)
-        self.auth_autoban = Mapping.from_cooldown(rate*3, per, Bucket2.user)
+        self.auth_autoban = Mapping.from_cooldown((rate*2)*2, per, Bucket2.user)
 
     def __call__(self, request: utils.TypedRequest):
         return self._wrap_call(request)
@@ -67,35 +76,38 @@ class Ratelimiter:
 
     async def do_call(self, request: utils.TypedRequest, conn):
         ip = request.headers.get("X-Forwarded-For") or request.remote
-        data = await conn.fetchrow("""
-            SELECT
-                (SELECT reason FROM bans WHERE ip = $1),
-                (SELECT username FROM auths WHERE auth_key = $2) AS login,
-                (SELECT ignores_ratelimits FROM auths WHERE auth_key = $2),
-                (SELECT active FROM auths WHERE auth_key = $1)
-            """, ip, request.headers.get("Authorization")) or _DEFAULT_DICT
+        # cant do this in 1 query :/
+        data = await conn.fetchrow("SELECT reason FROM bans WHERE ip = $1", ip)
+        data = dict(data) if data else _DEFAULT_DICT
+
         if data['reason']:
             return web.Response(status=403, reason=data['reason']), None, False
-        elif data['active'] is False:
+
+        _d = await conn.fetchrow("SELECT * FROM auths WHERE auth_key = $1", request.headers.get("Authorization"))
+        request.user = _d
+        _d = dict(_d) if _d else {}
+        data.update(_d)
+
+        if data['active'] is False:
             return web.Response(status=403, reason="Account is disabled"), None, False
 
         authorized = data['active']
         bucket = d = None
 
-        request.username = data['login']
+        request.username = data['username']
 
         high_map, low_map = self.autoban, self.map
-        if authorized and data['ignores_ratelimits'] is not True:
+        if authorized and data['ignores_ratelimits'] is not True and not data['administrator']:
             low_map.update_rate_limit(request)
             high_map.update_rate_limit(request) # track these still to track ips and whatnot, in case they stop using a token
 
             high_map, low_map = self.auth_autoban, self.auth_map
 
-        if not data['ignores_ratelimits']:
+        if not data['ignores_ratelimits'] and not data['administrator'] and self.ignore_perm not in data['permissions']:
             ban, _ = high_map.update_rate_limit(request)
             if ban is not None:
                 if authorized:
-                    await conn.execute("UPDATE auths SET active = false WHERE username = $1", data['login'])
+                    await conn.execute("UPDATE auths SET active = false WHERE username = $1", data['username'])
 
                 await conn.execute(
                     "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
@@ -107,7 +119,7 @@ class Ratelimiter:
         if d:
             response = web.Response(status=429, reason="Too Many Requests")
         else:
-            response = await self.cb(request)
+            response = await self.cb(request, conn)
 
         if bucket:
             headers = {
@@ -126,7 +138,7 @@ class Ratelimiter:
         response.headers.update({x: str(y) for x, y in headers.items()})
         return response, data['login'] if data else None, False
 
-def ratelimit(rate: int, per: int):
+def ratelimit(rate: int, per: int, ignore_perm: str=None):
     def wrapped(func):
-        return Ratelimiter(rate, per, func)
+        return Ratelimiter(rate, per, func, ignore_perm)
     return wrapped

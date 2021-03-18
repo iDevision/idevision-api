@@ -10,7 +10,7 @@ create table auths
 (
     username       text primary key,
     auth_key       text,
-    allowed_routes text[],
+    permissions     text[],
     active         boolean default true not null,
     discord_id     bigint,
     ignores_ratelimits boolean not null default false,

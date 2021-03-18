@@ -1,20 +1,22 @@
 import aiohttp_jinja2
 from aiohttp import web
-import utils
+
+from utils.utils import ratelimit, utils
 
 router = web.RouteTableDef()
 
 def setup(app):
     app.add_routes(router)
 
-@router.post("/api/home/urls")
+@router.post("/api/homepage")
+@ratelimit.ratelimit(5, 30)
 async def home_urls(request: utils.TypedRequest):
-    auth, _ = await utils.get_authorization(request, request.headers.get("Authorization"))
+    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
 
     data = await request.json()
-    user = data['user']
+    user = data.get("user", auth) if admin else auth
     displayname = data['display_name']
 
     link1 = data['link1'], data['link1_name']

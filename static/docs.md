@@ -1,4 +1,4 @@
-Because i'm a lazy fuck, you get plaintext docs.
+Idevision API Version 3.0a2
 
 Tokens
 ========
@@ -11,13 +11,16 @@ For any other endpoints, please message IAmTomahawkx#1000 on discord.
 
 GET /api/public/rtfs
 =======================
+This Endpoint indexes a python module, and returns links to the source on github for functions and classes closest to 
+the query provided. \
+If you have a module you wish to be included in the rtfs index, please contact me on discord: IAmTomahawkx#1000
 
 Ratelimit
 ----------
 3 requests per 5 seconds (3/5s). \
 Exceeding this api by double (6/5s) will result in an automatic api ban
 (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
-Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
 ---------------------------
@@ -36,13 +39,15 @@ Response 200
 
 GET /api/public/rtfm
 =======================
+This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided.\
+(rustdoc support may be coming soon)
 
 Ratelimit
 ----------
 3 requests per 5 seconds (3/5s). \
 Exceeding this api by double (6/5s) will result in an automatic api ban
 (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
-Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
 ---------------------------
@@ -75,7 +80,7 @@ Ratelimit
 2 requests per 10 seconds (2/10s). \
 Exceeding this api by double (4/10s) will result in an automatic api ban
 (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
-Please follow the ratelimit-retry-after headers when you recieve a 429 response code.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
 ---------------------------
@@ -89,8 +94,51 @@ Response 200
     "data": "Content here"
 }
 ```
+
+POST /api/homepage
+====================
+
+* Requires an idevision API token
+
+This endpoint allows you to set up a customized homepage,
+viewable at https://idevision.net/homepage?user=<your-username> \
+Anyone may access this, so don't put private links that do not require authorization.
+
+Ratelimit
+----------
+5 requests per 30 seconds (5/30s). \
+Exceeding this api by double (10/30s) will result in an automatic api ban
+(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+Example Payload
+----------------
+```json
+{
+    "link1": "https://duckduckgo.com",
+    "link1_name": "DuckDuckGo",
+    "link2": "https://github.com",
+    "link2_name": "GitHub",
+    "link3": "https://discord.com",
+    "link3_name": "Discord",
+    "link4": "https://idevision.net",
+    "link4_name": "IDevision"
+}
+```
+
+Returns
+--------
+Response 204 \
+[empty]
+
 <br><br><br>
 legal crap:\
 I reserve the right to deny access of anyone to this service at any time, for any reason.\
 I reserve the right to remove images from the cdn at any time, for any reason.\
-By using this service, you agree that I may collect usage info, 
+By using this service, you agree that I may collect usage info.
+Any images uploaded to this cdn are public.
+These policies may change at any time, without warning.
+
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE 
+USE OR OTHER DEALINGS IN THE SERVICE.

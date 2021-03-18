@@ -10,23 +10,14 @@ from aiohttp import web
 test = "--unittest" in sys.argv
 
 async def get_authorization(request: "TypedRequest", authorization):
-    if request.app.test:
-        return "iamtomahawkx", ["*"]
-
-    resp = await request.app.db.fetchrow("SELECT username, allowed_routes, administrator FROM auths WHERE auth_key = $1 and active = true", authorization)
+    resp = await request.app.db.fetchrow("SELECT username, permissions, administrator FROM auths WHERE auth_key = $1 and active = true", authorization)
     if resp is not None:
-        return resp['username'], resp['allowed_routes'], resp['administrator']
+        return resp['username'], resp['permissions'], resp['administrator']
     return None, []
 
-def route_allowed(allowed_routes, route):
-    if "*" in allowed_routes:
-        return True
-
-    if "{" in route:
-        route = route.split("{")[0] # remove any args
-
-    route = route.strip("/")
-    return route in allowed_routes
+def route_allowed(permissions, perm):
+    perm = perm.strip("/")
+    return perm in permissions
 
 class App(web.Application):
     def __init__(self, *args, **kwargs):
@@ -105,4 +96,5 @@ async def shuttingdown_middleware(request: "TypedRequest", handler: Callable):
 
 class TypedRequest(web.Request):
     app: App
+    user: Optional[dict]
     username: Optional[str]

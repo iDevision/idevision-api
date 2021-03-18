@@ -13,15 +13,13 @@
   - authorized request - may reset their own token
 - POST /api/internal/users/manage
   - users.manage
-- DELETE /api/internal/users/manage
-  - users.manage
 - POST /api/internal/users/deauth
   - users.manage
 - POST /api/internal/users/auth
   - users.manage
-- GET /api/bans
+- GET /api/internal/bans
   - users.bans
-- POST /api/bans
+- POST /api/internal/bans
   - users.bans
 
 ## Public
