@@ -5,3 +5,4 @@ pytesseract
 aiohttp_jinja2
 markdown2
 uvloop
+setproctitle

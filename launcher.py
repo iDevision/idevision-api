@@ -6,6 +6,7 @@ import os
 import sys
 import subprocess
 import markdown2
+import setproctitle
 import logging
 
 logger = logging.getLogger("site")
@@ -29,6 +30,7 @@ except:
 import endpoints
 from utils import utils
 
+setproctitle.setproctitle("Idevision site - Master")
 uptime = datetime.datetime.utcnow()
 test = "--unittest" in sys.argv
 
