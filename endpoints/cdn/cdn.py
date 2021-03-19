@@ -40,7 +40,10 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     allowed_auths = request.query.getall("authorized", None)
     target: str = request.query.get("node", None)
+
     if target and (utils.route_allowed(perms, "users.manage") or admin):
+        name: str = request.query.get("name", None)
+
         if target.isnumeric():
             target: int = int(target)
             if target not in request.app.slaves:
@@ -60,6 +63,7 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
             return web.Response(status=400, reason="The specified node is not available")
 
     else:
+        name = None
         t = time.time()
         options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300 and y['name'] not in request.app.settings['slave_no_balancing']}
         if not options:
@@ -70,6 +74,9 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("create")
         # use http to directly access the backend, cuz it probably isnt behind nginx
+
+    if name is not None:
+        url = url.with_query(name=name)
 
     async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
         # also i cant be asked to make a clientsession pool
