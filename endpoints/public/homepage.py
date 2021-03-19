@@ -1,7 +1,7 @@
 import aiohttp_jinja2
 from aiohttp import web
 
-from utils.utils import ratelimit, utils
+from utils import ratelimit, utils
 
 router = web.RouteTableDef()
 
@@ -9,8 +9,8 @@ def setup(app):
     app.add_routes(router)
 
 @router.post("/api/homepage")
-@ratelimit.ratelimit(5, 30)
-async def home_urls(request: utils.TypedRequest):
+@ratelimit(5, 30)
+async def home_urls(request: utils.TypedRequest, conn):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
         return web.Response(text="401 Unauthorized", status=401)
@@ -24,7 +24,7 @@ async def home_urls(request: utils.TypedRequest):
     link3 = data['link3'], data['link3_name']
     link4 = data['link4'], data['link4_name']
 
-    await request.app.db.execute("""INSERT INTO homepages VALUES ($1, $10, $2, $3, $4, $5, $6, $7, $8, $9)
+    await conn.execute("""INSERT INTO homepages VALUES ($1, $10, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (username) DO UPDATE SET 
     display_name = $10,
     link1 = $2, link1_name = $3,
