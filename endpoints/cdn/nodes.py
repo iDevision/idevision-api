@@ -74,7 +74,7 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
     else:
-        data = await conn.fetchrow("UPDATE slaves SET port = $1 WHERE node = $2 AND ip = $3 RETURNING *", port, node, ip)
+        data = await conn.fetchrow("SELECT * FROM slaves WHERE port = $1 AND node = $2 AND ip = $3", port, node, ip)
         if not data:
             return web.Response(status=400, text="Node mismatch")
 
