@@ -47,10 +47,11 @@ async def main():
                                     os.stat(f"/var/www/idevision/migration-slave/data/{x['key']}").st_size
                                )
                                 for x in all_uploads])
-        return
+        await conn.execute("drop table if exists cdn_logs;")
         await conn.execute("""
         create table cdn_logs (
     image text not null,
+    node integer not null,
     restricted boolean not null,
     remote text not null,
     accessed timestamp not null,

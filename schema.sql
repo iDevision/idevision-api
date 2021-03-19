@@ -68,6 +68,7 @@ create table logs
 );
 create table cdn_logs (
     image text not null,
+    node integer not null,
     restricted boolean not null,
     remote text not null,
     accessed timestamp not null,
