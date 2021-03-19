@@ -8,8 +8,10 @@ import subprocess
 import markdown2
 import logging
 
-logging.basicConfig()
 logger = logging.getLogger("site")
+handle = logging.StreamHandler(sys.stderr)
+handle.setLevel(logging.INFO)
+logger.addHandler(handle)
 
 logger.warning("Ensuring Source modules are up to date")
 subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)

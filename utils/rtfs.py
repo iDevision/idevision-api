@@ -92,7 +92,7 @@ class Index:
 
     async def do_index(self, no, a, package=None):
         package = package or self.lib
-        print(f"package-{package.__title__}: Indexing package ({no}/{a})")
+        logger.debug(f"package-{package.__title__}: Indexing package ({no}/{a})")
         nodes = []
         base = os.path.dirname(package.__file__)
         def _import_mod(r: str, f: str):
@@ -120,10 +120,10 @@ class Index:
             await self.index_class_layer(node)
 
         self.nodes = nodes
-        logger.warning(f"package-{package.__title__}: Created index. Mapping.")
+        logger.debug(f"package-{package.__title__}: Created index. Mapping.")
         self.create_map()
         self.map_keys = list(self.map.keys())
-        print(f"package-{package.__title__}: Created map. {len(self.map_keys)} nodes indexed")
+        logger.debug(f"package-{package.__title__}: Created map. {len(self.map_keys)} nodes indexed")
         return self
 
     def create_map(self):
