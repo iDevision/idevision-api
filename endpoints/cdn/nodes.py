@@ -39,7 +39,7 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     if not node or new:
         if not new:
-            d = await conn.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
+            d = await conn.fetchrow("SELECT node, name FROM slaves WHERE ip = $1 and port = $2", ip, port)
             if d:
                 request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
                 return web.json_response({"node": d['node'], "port": port, "ip": ip, "name": d['name']}, status=200)
@@ -65,7 +65,10 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
             )
             RETURNING node, name
             """
-            d = await conn.fetchrow(query, ip, port)
+            try:
+                d = await conn.fetchrow(query, ip, port)
+            except asyncpg.UniqueViolationError:
+                return web.Response(status=400, text="Node Exists.")
 
         request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
