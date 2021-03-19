@@ -11,12 +11,6 @@ from utils.rtfs import Indexes
 
 test = "--unittest" in sys.argv
 
-async def get_authorization(request: "TypedRequest", authorization):
-    resp = await request.app.db.fetchrow("SELECT username, permissions, administrator FROM auths WHERE auth_key = $1 and active = true", authorization)
-    if resp is not None:
-        return resp['username'], resp['permissions'], resp['administrator']
-    return None, []
-
 def route_allowed(permissions, perm):
     perm = perm.strip("/")
     return perm in permissions

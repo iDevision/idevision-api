@@ -25,7 +25,7 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
         return web.Response(status=400, reason="Missing library parameter")
 
     try:
-        v = request.app.rtfs.get_query(lib, query)
+        v = await request.app.rtfs.get_query(lib, query)
         if v is None:
             return web.Response(status=400, reason="library not found. If you think it should be added, contact IAmTomahawkx#1000 on discord.")
         else:
@@ -55,10 +55,11 @@ async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)
 async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
         return web.Response(reason=r, status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "public.ocr"):
         return web.Response(reason="401 Unauthorized", status=401)

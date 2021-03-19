@@ -7,12 +7,7 @@ from discord.ext.commands import CooldownMapping, BucketType, Cooldown
 import utils.utils as utils
 
 class Bucket2(BucketType):
-    def get_key(self, request: utils.TypedRequest):
-        if self is Bucket2.default:
-            print(request.remote)
-            return request.remote
-        elif self is Bucket2.user:
-            return request.username
+    pass
 
 class Mapping(CooldownMapping):
     def get_bucket(self, request, current=None):
@@ -28,6 +23,14 @@ class Mapping(CooldownMapping):
             bucket = self._cache[key]
 
         return bucket
+
+    def _bucket_key(self, request):
+        if self._cooldown.type is Bucket2.default:
+            return request.remote
+        elif self._cooldown.type is Bucket2.user:
+            return request.username
+        else:
+            raise ValueError
 
     def update_rate_limit(self, request, current=None) -> Tuple[Optional[float], Optional[Cooldown]]:
         bucket: Cooldown = self.get_bucket(request, current)
@@ -136,7 +139,7 @@ class Ratelimiter:
                 "ratelimit-retry-after": 0
             }
         response.headers.update({x: str(y) for x, y in headers.items()})
-        return response, data['login'] if data else None, False
+        return response, data['username'] if data else None, False
 
 def ratelimit(rate: int, per: int, ignore_perm: str=None):
     def wrapped(func):
