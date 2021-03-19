@@ -30,9 +30,10 @@ async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/cdn")
 @ratelimit(3, 7)
 async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "cdn"):
         return web.Response(reason="401 Unauthorized", status=401)
@@ -54,6 +55,7 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
 
         if type(target) is str:
             return web.Response(status=400, reason="The specified node is not available")
+
         elif time.time() - target['signin'] > 300:
             return web.Response(status=400, reason="The specified node is not available")
 
