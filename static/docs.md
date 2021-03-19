@@ -1,4 +1,4 @@
-Idevision API Version 3.0a2
+Idevision API Version 3.0
 
 # Tokens
 tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available
