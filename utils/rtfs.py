@@ -1,5 +1,7 @@
+import asyncio
 import os
 import inspect
+import logging
 import importlib
 import time
 import difflib
@@ -7,9 +9,10 @@ from types import ModuleType, FunctionType
 
 from typing import List
 
-import discord
+import discord, twitchio, wavelink
 from aiohttp import web
 
+logger = logging.getLogger("site.rtfs")
 
 class Node:
     source = None
@@ -32,14 +35,16 @@ class Node:
 
 
 class Index:
-    def __init__(self, url):
+    def __init__(self, url, lib):
+        self.lib = lib
         self.map = {}
         self.url = url
         self.map_keys = None
 
-    def index_module_layer(self, nodes: list, module):
+    async def index_module_layer(self, nodes: list, module):
         dirs = dir(module)
         for t in dirs:
+            await asyncio.sleep(0)
             if t.startswith("__"):
                 continue
 
@@ -64,10 +69,11 @@ class Index:
                     # print("no source for ", gets)
                     pass
 
-    def index_class_layer(self, node: Node):
+    async def index_class_layer(self, node: Node):
         children = dir(node.item)
 
         for child in children:
+            await asyncio.sleep(0)
             if child.startswith('__'):
                 continue
 
@@ -84,8 +90,9 @@ class Index:
             except TypeError:
                 pass
 
-    def do_index(self, package, no, a):
-        print(f"[RTFS] Indexing package {package.__title__} ({no}/{a})")
+    async def do_index(self, no, a, package=None):
+        package = package or self.lib
+        print(f"package-{package.__title__}: Indexing package ({no}/{a})")
         nodes = []
         base = os.path.dirname(package.__file__)
         def _import_mod(r: str, f: str):
@@ -107,16 +114,16 @@ class Index:
             for file in files:
                 if file.endswith(".py") and not file.startswith("__"):
                     mod = _import_mod(root, file)
-                    self.index_module_layer(nodes, mod)
+                    await self.index_module_layer(nodes, mod)
 
         for node in nodes:
-            self.index_class_layer(node)
+            await self.index_class_layer(node)
 
         self.nodes = nodes
-        print("[RTFS] Created index. Mapping.")
+        logger.warning(f"package-{package.__title__}: Created index. Mapping.")
         self.create_map()
         self.map_keys = list(self.map.keys())
-        print(f"[RTFS] Created map. {len(self.map_keys)} nodes indexed")
+        print(f"package-{package.__title__}: Created map. {len(self.map_keys)} nodes indexed")
         return self
 
     def create_map(self):
@@ -153,3 +160,42 @@ class Index:
             "nodes": out,
             "query_time": str(end-start)
         })
+
+
+class Indexes:
+    __indexable = {
+        "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/", discord),
+        "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/", twitchio),
+        "wavelink": Index(f"https://github.com/PythonistaGuild/Wavelink/v{wavelink.__version__.strip('a')}/", wavelink)
+    }
+    def __init__(self):
+        self.index = {}
+        self._is_indexed = False
+        self._loop = asyncio.get_event_loop()
+        self._loop.create_task(self._do_index())
+
+    @property
+    def indexed(self):
+        return self._is_indexed
+
+    @property
+    def libs(self):
+        return ", ".join(self.__indexable.keys())
+
+    def get_query(self, lib: str, query: str):
+        if not self._is_indexed:
+            raise RuntimeError("Indexing is not complete")
+
+        if lib not in self.index:
+            return None
+
+        return self.index[lib].do_rtfs(query)
+
+    async def _do_index(self):
+        logger.warning("Start Index")
+        amount = len(self.__indexable)
+        for n, (name, index) in self.__indexable.items():
+            self.index[name] = index.do_index(n, amount)
+
+        logger.warning("Finish Index")
+        self._is_indexed = True

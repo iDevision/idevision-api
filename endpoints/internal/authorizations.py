@@ -11,7 +11,7 @@ router = web.RouteTableDef()
 @ratelimit(5, 60, 'users.manage')
 async def get_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
@@ -26,13 +26,13 @@ async def get_user(request: utils.TypedRequest, conn: asyncpg.Connection):
         try:
             discord_id = int(discord_id)
         except:
-            return web.Response(status=400, text="Expected an integer for discordid")
+            return web.Response(status=400, reason="Expected an integer for discordid")
 
     if not admin and not utils.route_allowed(perms, "users"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not username and not discord_id:
-        return web.Response(text="'username' and/or 'discordid' query parameters are required", status=400)
+        return web.Response(reason="'username' and/or 'discordid' query parameters are required", status=400)
 
     v1 = "$1"
     v2 = "$2"
@@ -58,30 +58,30 @@ async def get_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @ratelimit(1, 1, "users.manage")
 async def apply(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     try:
         data = await request.json()
     except:
-        return web.Response(text="400 Invalid JSON", status=400)
+        return web.Response(reason="400 Invalid JSON", status=400)
 
     try:
         declined = await conn.fetchrow("SELECT decline_reason, auths.discord_id AS exists FROM applications INNER JOIN auths ON auths.discord_id = $1 WHERE userid = $1", data['userid'])
         if declined is not None and declined['decline_reason']:
-            return web.Response(text=f"Your application has been declined for the following reason: {declined['decline_reason']}", status=403)
+            return web.Response(reason=f"Your application has been declined for the following reason: {declined['decline_reason']}", status=403)
         elif declined is not None and declined['exists']:
-            return web.Response(text="You already have an account", status=403)
+            return web.Response(reason="You already have an account", status=403)
 
         await conn.execute("INSERT INTO applications VALUES ($1, $2, $3, $4)", data['userid'], data['username'], data['reason'], data['permissions'])
     except KeyError as e:
-        return web.Response(text=f"Missing {e.args[0]} body value", status=400)
+        return web.Response(reason=f"Missing {e.args[0]} body value", status=400)
     except asyncpg.UniqueViolationError:
-        return web.Response(text="Already Applied", status=403)
+        return web.Response(reason="Already Applied", status=403)
     else:
         return web.Response(status=201)
 
@@ -89,23 +89,23 @@ async def apply(request: utils.TypedRequest, conn: asyncpg.Connection):
 @ratelimit(1, 1, "users.manage")
 async def accept_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     try:
         data = await request.json()
         userid = data['userid']
     except:
-        return web.Response(text="400 Invalid JSON", status=400)
+        return web.Response(reason="400 Invalid JSON", status=400)
 
     application = await conn.fetchrow("DELETE FROM applications WHERE userid = $1 RETURNING userid, username, routes", userid)
 
     if application is None:
-        return web.Response(status=400, text="Application not found")
+        return web.Response(status=400, reason="Application not found")
 
     token = f"user.{application['username']}.{secrets.token_urlsafe(25)}"
     await conn.execute(
@@ -118,12 +118,12 @@ async def accept_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @ratelimit(1, 1, "users.manage")
 async def deny_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     try:
         data = await request.json()
@@ -131,7 +131,7 @@ async def deny_user(request: utils.TypedRequest, conn: asyncpg.Connection):
         reason = data['reason']
         allow_retry = data['retry']
     except:
-        return web.Response(text="400 Invalid JSON", status=400)
+        return web.Response(reason="400 Invalid JSON", status=400)
 
     if not allow_retry:
         application = await conn.fetchrow(
@@ -153,7 +153,7 @@ async def deny_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @ratelimit(1, 120, "users.manage")
 async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
@@ -166,15 +166,15 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
         else:
             username = auth
         if username != auth and not utils.route_allowed(perms, "users.manage"):
-            return web.Response(text="401 Unauthorized", status=401)
+            return web.Response(reason="401 Unauthorized", status=401)
     except:
-        return web.Response(text="Invalid JSON", status=400)
+        return web.Response(reason="Invalid JSON", status=400)
 
     new_token = f"user.{username}.{secrets.token_urlsafe(25)}"
     if await conn.fetchval("UPDATE auths SET auth_token = $1 WHERE username = $2 RETURNING username", new_token, username) is not None:
         return web.json_response({"token": new_token})
     else:
-        return web.Response(status=400, text="Account not found", reason="Account not found")
+        return web.Response(status=400, reason="Account not found")
 
 
 @router.post("/api/internal/users/manage")
@@ -182,10 +182,10 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     try:
         data = await request.json()
@@ -201,12 +201,12 @@ async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response()
 
     if administrator and not admin:
-        return web.Response(status=403, text="You cannot assign admin")
+        return web.Response(status=403, reason="You cannot assign admin")
 
     if not admin and any(not utils.route_allowed(perms, route) for route in userperms):
         return web.Response(
             status=403,
-            text=f"You cannot assign the "
+            reason=f"You cannot assign the "
                  f"{','.join(route for route in userperms if not utils.route_allowed(perms, route))} permission(s)"
         )
 
@@ -228,10 +228,10 @@ async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     data = await request.json()
     usr = data.get("username")
@@ -247,10 +247,10 @@ async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     data = await request.json()
     usr = data.get("username")
@@ -265,10 +265,10 @@ async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "users.bans"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     ip = request.query.get("ip")
     useragent = request.query.get("user-agent")
@@ -297,10 +297,10 @@ async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def create_ban(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "users.bans"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     ip = request.query.get("ip")
     useragent = request.query.get("user-agent")

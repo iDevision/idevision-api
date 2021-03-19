@@ -6,43 +6,25 @@ import os
 import sys
 import subprocess
 import markdown2
+import logging
 
-subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
+logging.basicConfig()
+logger = logging.getLogger("site")
+
+logger.warning("Ensuring Source modules are up to date")
+subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)
+
+try:
+    import uvloop
+    uvloop.install()
+except:
+    logger.warning("Failed to use uvloop")
 
 import endpoints
 from utils import utils
 
 uptime = datetime.datetime.utcnow()
 test = "--unittest" in sys.argv
-
-choices = list("qwertyuiopadfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890")
-metrics = [
-    "PRESENCE_UPDATE",
-    "MESSAGE_CREATE",
-    "TYPING_START",
-    "GUILD_MEMBER_UPDATE",
-    "MESSAGE_UPDATE",
-    "MESSAGE_REACTION_ADD",
-    "MESSAGE_REACTION_REMOVE",
-    "VOICE_STATE_UPDATE",
-    "GUILD_MEMBER_ADD",
-    "GUILD_MEMBERS_CHUNK",
-    "MESSAGE_DELETE",
-    "GUILD_MEMBER_REMOVE",
-    "GUILD_CREATE",
-    "MESSAGE_REACTION_REMOVE_ALL",
-    "READY",
-    "VOICE_SERVER_UPDATE",
-    "RESUMED"
-]
-DEFAULT_ROUTES = [
-    "api/media/post",
-    "api/media/stats/image",
-    "api/media/stats/user",
-    "api/media/list",
-    "api/media/list/user",
-    "api/media/images",
-]
 
 app = utils.App()
 endpoints.setup(app)
@@ -113,13 +95,13 @@ async def git_checks(request: utils.TypedRequest):
 async def home(_):
     return web.FileResponse("static/index.html")
 
-print("Building docs...")
+logger.warning("Building docs...")
 with open("static/docs.md") as f:
     docs = markdown2.markdown(f.read())
 with open("static/docs.html") as f:
     docs = f.read().replace("{{docs}}", docs)
 
-print("Built docs.")
+logger.warning("Built docs.")
 
 @router.get("/docs")
 async def _docs(_):
@@ -133,6 +115,7 @@ async def robots(_):
 async def favicon(_):
     return web.FileResponse("static/favicon.ico")
 
+logger.debug("Mounting static routes")
 router.static("/vendor", "static/vendor")
 router.static("/images", "static/images")
 router.static("/fonts", "static/fonts")

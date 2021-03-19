@@ -4,7 +4,4 @@ aiohttp
 pytesseract
 aiohttp_jinja2
 markdown2
-
-discord.py
-twitchio
-wavelink
+uvloop

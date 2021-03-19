@@ -32,10 +32,10 @@ async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
 async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     if not admin and not utils.route_allowed(perms, "cdn"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     allowed_auths = request.query.getall("authorized", None)
     target: str = request.query.get("node", None)
@@ -43,7 +43,7 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
         if target.isnumeric():
             target: int = int(target)
             if target not in request.app.slaves:
-                return web.Response(status=400, text="The specified node is not available")
+                return web.Response(status=400, reason="The specified node is not available")
 
             target: dict = request.app.slaves[target]
         else:
@@ -53,15 +53,15 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
                     break
 
         if type(target) is str:
-            return web.Response(status=400, text="The specified node is not available")
+            return web.Response(status=400, reason="The specified node is not available")
         elif time.time() - target['signin'] > 300:
-            return web.Response(status=400, text="The specified node is not available")
+            return web.Response(status=400, reason="The specified node is not available")
 
     else:
         t = time.time()
         options = {x: y for x, y in request.app.slaves.items() if t-y['signin'] < 300 and y['name'] not in request.app.settings['slave_no_balancing']}
         if not options:
-            return web.Response(status=503, text="Error: no nodes available")
+            return web.Response(status=503, reason="Error: no nodes available")
 
         target = random.choice(list(options.keys()))
         target = options[target]
@@ -77,9 +77,9 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
                                     "Content-Type": request.headers.get("Content-Type")
                                 }) as resp:
             if resp.status == 600:
-                return web.Response(status=400, text=await resp.text())
+                return web.Response(status=400, reason=await resp.text())
             elif 100 >= resp.status >= 300:
-                return web.Response(status=500, text=await resp.text())
+                return web.Response(status=500, reason=await resp.text())
             else:
                 data = await resp.text()
                 data = json.loads(data)
@@ -106,12 +106,12 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
 @ratelimit(30, 60)
 async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "cdn"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     key = request.match_info.get("key")
     node = request.match_info.get("node")
@@ -145,12 +145,12 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     node = request.match_info.get("node")
 
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "cdn"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     target = None
     for n in request.app.slaves:
@@ -158,7 +158,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
             target = n
 
     if target is None:
-        return web.Response(status=400, text="Node is unavailable or does not exist")
+        return web.Response(status=400, reason="Node is unavailable or does not exist")
 
     if admin or utils.route_allowed(perms, "cdn.manage"):
         coro = conn.fetchrow(
@@ -178,7 +178,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
         if admin or utils.route_allowed(perms, "cdn.manage"):
             return web.Response(status=404)
 
-        return web.Response(status=401, text="401 Unauthorized")
+        return web.Response(status=401, reason="401 Unauthorized")
 
     target = request.app.slaves[node]
     url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("delete")
@@ -194,12 +194,12 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/cdn/purge")
 async def purge_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "cdn.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     data = await request.json()
     usr = data.get("username")
@@ -226,7 +226,7 @@ async def purge_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.get("/api/cdn/list")
 async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
@@ -254,13 +254,13 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.get("/api/cdn/list/{user}")
 async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
     usr = request.match_info.get("user", auth)
 
     if usr != auth and not admin and not utils.route_allowed(perms, "cdn.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     values = await conn.fetch("SELECT key, node, size FROM uploads WHERE username = $1 AND deleted is false ORDER BY time;", usr)
     return web.json_response([{"key": rec['key'], "node": rec['node'], "size": rec['size']} for rec in values])
@@ -268,13 +268,13 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.get("/api/cdn/user")
 async def get_user_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
     usr = request.query.get("username", auth)
 
     if usr != auth and not admin and not utils.route_allowed(perms, "cdn.manage"):
-        return web.Response(text="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized", status=401)
 
     amount = await conn.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1 and deleted is false", usr)
     recent = await conn.fetchrow("SELECT key, node FROM uploads WHERE username = $1 and deleted is false ORDER BY time DESC", usr)

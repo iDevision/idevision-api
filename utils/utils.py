@@ -7,6 +7,8 @@ from typing import Callable, Optional
 import asyncpg
 from aiohttp import web
 
+from utils.rtfs import Indexes
+
 test = "--unittest" in sys.argv
 
 async def get_authorization(request: "TypedRequest", authorization):
@@ -36,6 +38,7 @@ class App(web.Application):
             self.settings = json.load(f)
 
         self.slaves = {}
+        self.rtfs = Indexes()
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:
