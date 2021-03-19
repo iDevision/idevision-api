@@ -180,9 +180,10 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/internal/users/manage")
 @ratelimit(1, 1, "users.manage")
 async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
         return web.Response(reason="401 Unauthorized", status=401)

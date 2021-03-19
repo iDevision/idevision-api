@@ -194,6 +194,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
             return web.Response(status=resp.status)
 
 @router.post("/api/cdn/purge")
+@ratelimit(1, 1, "cdn.manage")
 async def purge_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
@@ -218,14 +219,14 @@ async def purge_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     for group, vals in itertools.groupby(data, key=lambda r: r['node']):
         node = request.app.slaves[group]
         url = yarl.URL(f"http://{node['ip']}").with_port(node['port']).with_path("mass-delete") # TODO: mass delete on slave end
-        async with session.post(url, json={"ids": list(vals)}) as resp:
+        async with session.post(url, json={"ids": [x['id'] for x in vals]}) as resp:
             pass
 
     await session.close()
-
     return web.Response()
 
 @router.get("/api/cdn/list")
+@ratelimit(15, 60, "cdn.manage")
 async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
@@ -254,6 +255,7 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response(resp)
 
 @router.get("/api/cdn/list/{user}")
+@ratelimit(15, 60, "cdn.manage")
 async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
@@ -268,6 +270,7 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response([{"key": rec['key'], "node": rec['node'], "size": rec['size']} for rec in values])
 
 @router.get("/api/cdn/user")
+@ratelimit(15, 60, "cdn.manage")
 async def get_user_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
@@ -279,11 +282,11 @@ async def get_user_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(reason="401 Unauthorized", status=401)
 
     amount = await conn.fetchval("SELECT COUNT(*) FROM uploads WHERE username = $1 and deleted is false", usr)
-    recent = await conn.fetchrow("SELECT key, node FROM uploads WHERE username = $1 and deleted is false ORDER BY time DESC", usr)
+    recent = await conn.fetchrow("SELECT key, slaves.name FROM uploads INNER JOIN slaves ON slaves.node = uploads.node WHERE username = $1 and deleted is false ORDER BY time DESC LIMIT 1", usr)
     if not amount and not recent:
         return web.Response(status=400, reason="User not found/no entries")
 
     return web.json_response({
         "upload_count": amount,
-        "last_upload": f"https://{request.app.settings['child_site']}/{recent['node']}/{recent['key']}"
+        "last_upload": f"https://{request.app.settings['child_site']}/{recent['name']}/{recent['key']}"
     })
