@@ -56,7 +56,7 @@ Response 200
 }
 ```
 
-## POST /api/public/ocr
+## GET /api/public/ocr
 
 * Requires an idevision API token
 
