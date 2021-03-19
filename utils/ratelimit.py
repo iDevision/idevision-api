@@ -4,7 +4,7 @@ from typing import Tuple, Optional
 from aiohttp import web
 from discord.ext.commands import CooldownMapping, BucketType, Cooldown
 
-import utils
+import utils.utils as utils
 
 class Bucket2(BucketType):
     def get_key(self, request: utils.TypedRequest):
