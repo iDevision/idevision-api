@@ -5,6 +5,7 @@ import jinja2
 import os
 import sys
 import subprocess
+import markdown2
 
 subprocess.run(["/bin/bash", "-c", "pip install -U -r requirements.txt"], stderr=sys.stderr, stdout=sys.stdout) # update these manually, just to make sure the rtfs is up to date
 
@@ -46,12 +47,6 @@ DEFAULT_ROUTES = [
 app = utils.App()
 endpoints.setup(app)
 router = web.RouteTableDef()
-
-router.static("/static", "./static")
-
-@router.get("/docs")
-async def _docs(_):
-    raise web.HTTPPermanentRedirect("/static/docs.html")
 
 @router.post("/api/media/container/upload")
 async def usercontent_upload(request: utils.TypedRequest):
@@ -118,6 +113,17 @@ async def git_checks(request: utils.TypedRequest):
 async def home(_):
     return web.FileResponse("static/index.html")
 
+print("Building docs...")
+with open("static/docs.md") as f:
+    docs = markdown2.markdown(f.read())
+
+print("Built docs.")
+
+@router.get("/docs")
+@aiohttp_jinja2.template("static/docs.html")
+async def _docs(_):
+    return {"docs": docs}
+
 @router.get("/robots.txt")
 async def robots(_):
     return web.FileResponse("static/robots.txt")
@@ -131,6 +137,7 @@ router.static("/images", "static/images")
 router.static("/fonts", "static/fonts")
 router.static("/css", "static/css")
 router.static("/js", "static/js")
+router.static("/static", "static")
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./'))
 app.add_routes(router)

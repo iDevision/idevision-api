@@ -36,7 +36,7 @@ async def home_urls(request: utils.TypedRequest):
     return web.Response(status=204)
 
 @router.get("/homepage")
-@aiohttp_jinja2.template("homepage.html")
+@aiohttp_jinja2.template("static/homepage.html")
 async def home(request: utils.TypedRequest):
     usr = request.query.get("user", "Unknown")
     row = await request.app.db.fetchrow("SELECT * FROM homepages WHERE username = $1", usr)
