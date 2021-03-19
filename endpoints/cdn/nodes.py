@@ -50,6 +50,7 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
             ($1, $2, $3)
             RETURNING node, name
             """
+            d = await conn.fetchrow(query, name, ip, port)
         else:
             query = """
             INSERT INTO
@@ -62,8 +63,8 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
             )
             RETURNING node, name
             """
+            d = await conn.fetchrow(query, ip, port)
 
-        d = await conn.fetchrow(query, ip, port)
         request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
         return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
 
