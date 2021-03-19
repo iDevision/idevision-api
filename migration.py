@@ -36,17 +36,23 @@ async def main():
     PRIMARY KEY(key, node)
 );
         """)
-        await conn.executemany("INSERT INTO uploads VALUES ($1, $2, $3, $4, $5, $6, 1, false, $7)",
-                               [(
-                                   x['key'],
-                                    x['username'],
-                                    x['time'],
-                                    x['views'],
-                                    x['allowed_authorizations'],
-                                    f"media/{x['key']}",
-                                    os.stat(f"/var/www/idevision/migration-slave/data/{x['key']}").st_size
-                               )
-                                for x in all_uploads])
+        vs = []
+        for x in all_uploads:
+            try:
+                vs.append((
+                    x['key'],
+                    x['username'],
+                    x['time'],
+                    x['views'],
+                    x['allowed_authorizations'],
+                    f"media/{x['key']}",
+                    os.stat(f"/var/www/idevision/migration-slave/data/{x['key']}").st_size
+                ))
+                print(x['key'])
+            except:
+                pass
+
+        await conn.executemany("INSERT INTO uploads VALUES ($1, $2, $3, $4, $5, $6, 1, false, $7)", vs)
         await conn.execute("drop table if exists cdn_logs;")
         await conn.execute("""
         create table cdn_logs (
