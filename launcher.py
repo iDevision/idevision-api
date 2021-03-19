@@ -9,8 +9,9 @@ import markdown2
 import logging
 
 logger = logging.getLogger("site")
+logger.setLevel(10)
 handle = logging.StreamHandler(sys.stderr)
-handle.setLevel(logging.INFO)
+handle.setFormatter(logging.Formatter("{levelname}[{name}] : {message}", style="{"))
 logger.addHandler(handle)
 
 logger.warning("Ensuring Source modules are up to date")

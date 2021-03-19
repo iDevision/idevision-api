@@ -39,6 +39,7 @@ class App(web.Application):
 
         self.slaves = {}
         self.rtfs = Indexes()
+        #self.on_startup.append(self.rtfs._do_index)
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:

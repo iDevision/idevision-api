@@ -13,6 +13,7 @@ import discord, twitchio, wavelink
 from aiohttp import web
 
 logger = logging.getLogger("site.rtfs")
+logger.setLevel(10)
 
 class Node:
     source = None
@@ -92,7 +93,7 @@ class Index:
 
     async def do_index(self, no, a, package=None):
         package = package or self.lib
-        logger.debug(f"package-{package.__title__}: Indexing package ({no}/{a})")
+        logger.info(f"package:{package.__title__}: Indexing package ({no}/{a})")
         nodes = []
         base = os.path.dirname(package.__file__)
         def _import_mod(r: str, f: str):
@@ -120,10 +121,10 @@ class Index:
             await self.index_class_layer(node)
 
         self.nodes = nodes
-        logger.debug(f"package-{package.__title__}: Created index. Mapping.")
+        logger.info(f"package:{package.__title__}: Created index. Mapping.")
         self.create_map()
         self.map_keys = list(self.map.keys())
-        logger.debug(f"package-{package.__title__}: Created map. {len(self.map_keys)} nodes indexed")
+        logger.info(f"package:{package.__title__}: Created map. {len(self.map_keys)} nodes indexed")
         return self
 
     def create_map(self):
@@ -191,11 +192,11 @@ class Indexes:
 
         return self.index[lib].do_rtfs(query)
 
-    async def _do_index(self):
-        logger.warning("Start Index")
+    async def _do_index(self, *_):
+        logger.info("Start Index")
         amount = len(self.__indexable)
         for n, (name, index) in enumerate(self.__indexable.items()):
-            self.index[name] = index.do_index(n, amount)
+            self.index[name] = await index.do_index(n+1, amount)
 
-        logger.warning("Finish Index")
+        logger.info("Finish Index")
         self._is_indexed = True
