@@ -29,7 +29,7 @@ router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
 @ratelimit(3, 5)
-async def do_rtfs(request: utils.TypedReques, _: asyncpg.Connection):
+async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
