@@ -10,12 +10,12 @@ import yarl
 
 from aiohttp import web
 
-from utils.utils import ratelimit, utils
+from utils import ratelimit, utils
 
 router = web.RouteTableDef()
 
 @router.get("/api/cdn")
-@ratelimit.ratelimit(20, 60)
+@ratelimit(20, 60)
 async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     amount = await conn.fetchrow("SELECT "
         "(SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount, "
@@ -28,7 +28,7 @@ async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     })
 
 @router.post("/api/cdn")
-@ratelimit.ratelimit(3, 7)
+@ratelimit(3, 7)
 async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
@@ -103,7 +103,7 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
 
 
 @router.get("/api/cdn/{node}/{image}")
-@ratelimit.ratelimit(30, 60)
+@ratelimit(30, 60)
 async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -140,7 +140,7 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
 
 
 @router.delete("/api/cdn/{node}/{image}")
-@ratelimit.ratelimit(15, 60, "cdn.manage")
+@ratelimit(15, 60, "cdn.manage")
 async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     node = request.match_info.get("node")
 

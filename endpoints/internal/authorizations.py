@@ -8,7 +8,7 @@ from utils import ratelimit, utils
 router = web.RouteTableDef()
 
 @router.get("/api/internal/users")
-@ratelimit.ratelimit(5, 60, 'users.manage')
+@ratelimit(5, 60, 'users.manage')
 async def get_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -55,7 +55,7 @@ async def get_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 
 
 @router.post("/api/internal/users/apply")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def apply(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -86,7 +86,7 @@ async def apply(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(status=201)
 
 @router.post("/api/internal/users/accept")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def accept_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -115,7 +115,7 @@ async def accept_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response({"token": token}, status=201)
 
 @router.post("/api/internal/users/deny")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def deny_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -150,7 +150,7 @@ async def deny_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.Response(status=204)
 
 @router.post("/api/internal/users/token")
-@ratelimit.ratelimit(1, 120, "users.manage")
+@ratelimit(1, 120, "users.manage")
 async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(text="401 Unauthorized", status=401)
@@ -178,7 +178,7 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
 
 
 @router.post("/api/internal/users/manage")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
@@ -224,7 +224,7 @@ async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response({"token": token})
 
 @router.post("/api/internal/users/deauth")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
@@ -243,7 +243,7 @@ async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.Response(status=204)
 
 @router.post("/api/internal/users/auth")
-@ratelimit.ratelimit(1, 1, "users.manage")
+@ratelimit(1, 1, "users.manage")
 async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
@@ -261,7 +261,7 @@ async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.Response(status=204)
 
 @router.get("/api/internal/bans")
-@ratelimit.ratelimit(10, 10, "users.bans")
+@ratelimit(10, 10, "users.bans")
 async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
@@ -293,7 +293,7 @@ async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response({"bans": [dict(x) for x in resp]})
 
 @router.post("/api/internal/bans")
-@ratelimit.ratelimit(1, 1, "users.bans")
+@ratelimit(1, 1, "users.bans")
 async def create_ban(request: utils.TypedRequest, conn: asyncpg.Connection):
     auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
     if not auth:
