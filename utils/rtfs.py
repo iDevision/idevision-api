@@ -194,7 +194,7 @@ class Indexes:
     async def _do_index(self):
         logger.warning("Start Index")
         amount = len(self.__indexable)
-        for n, (name, index) in self.__indexable.items():
+        for n, (name, index) in enumerate(self.__indexable.items()):
             self.index[name] = index.do_index(n, amount)
 
         logger.warning("Finish Index")
