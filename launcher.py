@@ -116,13 +116,14 @@ async def home(_):
 print("Building docs...")
 with open("static/docs.md") as f:
     docs = markdown2.markdown(f.read())
+with open("static/docs.html") as f:
+    docs = f.read().replace("{{docs}}", docs)
 
 print("Built docs.")
 
 @router.get("/docs")
-@aiohttp_jinja2.template("static/docs.html")
 async def _docs(_):
-    return {"docs": docs}
+    return web.Response(text=docs, content_type="text/html")
 
 @router.get("/robots.txt")
 async def robots(_):
