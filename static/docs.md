@@ -144,6 +144,8 @@ ___
   - (public)
 - GET /api/public/rtfs
   - (public)
+- GET /
+  - (public)
 
 ### CDN
 - GET /api/cdn
