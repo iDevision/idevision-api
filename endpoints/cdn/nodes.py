@@ -26,6 +26,8 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
         print(e)
         return web.Response(status=400, text="Bad json")
 
+    print(data)
+
     node = data.get("node", None)
     if node is not None:
         try:
@@ -40,7 +42,7 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
             d = await conn.fetchrow("SELECT node, name FROM slaves WHERE ip = $1", ip)
             if d:
                 request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
-                return web.json_response({"node": d, "port": port, "ip": ip, "name": d['name']}, status=200)
+                return web.json_response({"node": d['node'], "port": port, "ip": ip, "name": d['name']}, status=200)
 
         if name is not None:
             query = """
