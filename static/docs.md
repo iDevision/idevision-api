@@ -3,23 +3,21 @@ Idevision API Version 3.0a2
 Tokens
 ========
 tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available
-to everyone at https://cdn.idevision.net, uploading images and viewing statistic endpoints requires a token), the OCR API, and so on. \
-You can apply for a token to the OCR API by using the `idevision apply` command on the `BOB (dev)#0346` bot on discord. \
-You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discretion. \
+to everyone at https://cdn.idevision.net, uploading images and viewing statistic endpoints requires a token), the OCR API, and so on. 
+You can apply for a token to the OCR API by using the `idevision apply` command on the `BOB (dev)#0346` bot on discord.
+You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discretion.
 For any other endpoints, please message IAmTomahawkx#1000 on discord.
 
 
 GET /api/public/rtfs
 =======================
-This Endpoint indexes a python module, and returns links to the source on github for functions and classes closest to 
-the query provided. \
+This Endpoint indexes a python module, and returns links to the source on github for functions and classes closest to the query provided.
 If you have a module you wish to be included in the rtfs index, please contact me on discord: IAmTomahawkx#1000
 
 Ratelimit
 ----------
-3 requests per 5 seconds (3/5s). \
-Exceeding this api by double (6/5s) will result in an automatic api ban
-(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+3 requests per 5 seconds (3/5s).
+Exceeding this api by double (6/5s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
@@ -39,14 +37,12 @@ Response 200
 
 GET /api/public/rtfm
 =======================
-This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided.\
-(rustdoc support may be coming soon)
+This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided. (rustdoc support may be coming soon)
 
 Ratelimit
 ----------
-3 requests per 5 seconds (3/5s). \
-Exceeding this api by double (6/5s) will result in an automatic api ban
-(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+3 requests per 5 seconds (3/5s).
+Exceeding this api by double (6/5s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
@@ -72,14 +68,13 @@ POST /api/public/ocr
 * Requires an idevision API token
 
 This endpoint takes a multipart file, and returns the contents of the image as text.
-> this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint. \
+> this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint.
 > Only two images are processed at a time (globally).
 
 Ratelimit
 ----------
-2 requests per 10 seconds (2/10s). \
-Exceeding this api by double (4/10s) will result in an automatic api ban
-(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+2 requests per 10 seconds (2/10s).
+Exceeding this api by double (4/10s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Required Query parameters
@@ -100,15 +95,13 @@ POST /api/homepage
 
 * Requires an idevision API token
 
-This endpoint allows you to set up a customized homepage,
-viewable at https://idevision.net/homepage?user=<your-username> \
+This endpoint allows you to set up a customized homepage, viewable at https://idevision.net/homepage?user=<your-username>
 Anyone may access this, so don't put private links that do not require authorization.
 
 Ratelimit
 ----------
-5 requests per 30 seconds (5/30s). \
-Exceeding this api by double (10/30s) will result in an automatic api ban
-(and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled. \
+5 requests per 30 seconds (5/30s).
+Exceeding this api by double (10/30s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 Example Payload
@@ -128,13 +121,13 @@ Example Payload
 
 Returns
 --------
-Response 204 \
+Response 204
 [empty]
 
 <br><br><br>
-legal crap:\
-I reserve the right to deny access of anyone to this service at any time, for any reason.\
-I reserve the right to remove images from the cdn at any time, for any reason.\
+legal crap:
+I reserve the right to deny access of anyone to this service at any time, for any reason.
+I reserve the right to remove images from the cdn at any time, for any reason.
 By using this service, you agree that I may collect usage info.
 Any images uploaded to this cdn are public.
 These policies may change at any time, without warning.

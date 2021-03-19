@@ -14,7 +14,10 @@ handle.setLevel(logging.INFO)
 logger.addHandler(handle)
 
 logger.warning("Ensuring Source modules are up to date")
-subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)
+try:
+    subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)
+except FileNotFoundError:
+    logger.critical("Failed to update Source modules, bash not found.")
 
 try:
     import uvloop
@@ -99,7 +102,7 @@ async def home(_):
 
 logger.warning("Building docs...")
 with open("static/docs.md") as f:
-    docs = markdown2.markdown(f.read())
+    docs = markdown2.markdown(f.read(), extras=['fenced-code-blocks', 'break-on-newline'])
 with open("static/docs.html") as f:
     docs = f.read().replace("{{docs}}", docs)
 
