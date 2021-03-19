@@ -106,13 +106,12 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
     return web.json_response({
         "url": f"https://{request.app.settings['child_site']}/{target['name']}/{new_name}",
         "slug": new_name,
-        "name": new_name,
         "node": target['name']
-    }, status=200)
+    }, status=201)
 
 
-@router.get("/api/cdn/{node}/{image}")
-@ratelimit(30, 60)
+@router.get("/api/cdn/{node}/{slug}")
+@ratelimit(15, 60)
 async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
@@ -122,7 +121,7 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
     if not admin and not utils.route_allowed(perms, "cdn"):
         return web.Response(reason="401 Unauthorized", status=401)
 
-    key = request.match_info.get("key")
+    key = request.match_info.get("slug")
     node = request.match_info.get("node")
 
     query = """
@@ -148,8 +147,8 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
     })
 
 
-@router.delete("/api/cdn/{node}/{image}")
-@ratelimit(15, 60, "cdn.manage")
+@router.delete("/api/cdn/{node}/{slug}")
+@ratelimit(7, 60, "cdn.manage")
 async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     node = request.match_info.get("node")
 
@@ -172,7 +171,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     if admin or utils.route_allowed(perms, "cdn.manage"):
         coro = conn.fetchrow(
             "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 RETURNING *;",
-            request.match_info.get("image"),
+            request.match_info.get("slug"),
             node
         )
 

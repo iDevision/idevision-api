@@ -32,6 +32,7 @@ Response 200
     "query_time": "1.0"
 }
 ```
+___
 
 ## GET /api/public/rtfm
 This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided. (rustdoc support may be coming soon)
@@ -55,10 +56,11 @@ Response 200
     "query_time": "1.0"
 }
 ```
+___
 
 ## GET /api/public/ocr
 
-* Requires an idevision API token
+* Requires an idevision API token with the `public.ocr` permission group
 
 This endpoint takes a multipart file, and returns the contents of the image as text.
 > this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint.
@@ -79,6 +81,7 @@ Response 200
     "data": "Content here"
 }
 ```
+___
 
 ## POST /api/homepage
 * Requires an idevision API token
@@ -110,6 +113,93 @@ Response 204
 [empty]
 
 ___
+# CDN Endpoints
+
+## POST /api/cdn
+* Requires an idevision API token with the `cdn` permission group
+
+This endpoint allows you to upload content to the idevision cdn. 
+
+### Ratelimit
+6 requests per 60 seconds (6/60s).
+Exceeding this api by double (12/60) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Optional query parameters
+- name: specifies the name of the file. Requires the `cdn.manage` permission to be effective
+- node: specifies the cdn node to use. Requires the `cdn.manage` permission to be effective
+
+### Example payload
+This endpoint expects a multipart form containing the image to upload. I'm not putting an example of that...
+If you are using python, a bytesio may be passed to aiohttp's ClientSession.post method under the `data` kwarg.
+
+### Returns
+Response 201
+```json
+{
+    "url": "https://cdn.idevision.net/node/slug",
+    "slug": "somename.filetype",
+    "node": "node the file is on"
+}
+```
+___
+
+## GET /api/cdn
+This endpoint fetches basic statistics on the cdn.
+
+### Ratelimit
+20 requests per 60 seconds (20/60s).
+Exceeding this api by double (40/60) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Returns
+```json
+{
+    "upload_count": 1234,
+    "uploaded_today": 1234,
+    "last_uploaded": "https://cdn.idevision.net/node/slug"
+}
+```
+___
+
+## GET /api/cdn/{node}/{slug}
+* Requires an idevision api token with the `cdn` permission group
+
+Fetches info on a specific upload.
+
+### Ratelimit
+30 requests per 60 seconds (30/60s).
+Exceeding this api by double (60/60) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Response
+Response 200
+```json
+{
+  "url": "https://cdn.idevision.net/node/slug",
+  "timestamp": 12345,
+  "author": "tom",
+  "views": 5,
+  "node": "node",
+  "size": 12345
+}
+```
+size is in bytes
+___
+
+## DELETE /api/cdn/{node}/{slug}
+* Requires an idevision api token with the `cdn` permission group
+
+Deletes a file from the cdn. If you do not have the `cdn.manage` permission group, you may only delete your own images.
+
+### Ratelimit
+14 requests per 60 seconds (14/60s).
+Exceeding this api by double (10/30) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Returns
+Response 204
+> No content.
 
 # Routes & permissions
 ### Users
