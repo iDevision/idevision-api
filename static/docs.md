@@ -130,8 +130,9 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 - node: specifies the cdn node to use. Requires the `cdn.manage` permission to be effective
 
 ### Example payload
-This endpoint expects a multipart form containing the image to upload. I'm not putting an example of that...
-If you are using python, a bytesio may be passed to aiohttp's ClientSession.post method under the `data` kwarg.
+This endpoint expects either a multipart form containing the image to upload, or a bytes stream of the file.
+You should pass a `File-Name` header that specifies the name of the file, as the file extension will be pulled from this header.
+It will default to .jpg if no `File-Name` header is passed.
 
 ### Returns
 Response 201

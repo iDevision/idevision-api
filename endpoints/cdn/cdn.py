@@ -83,7 +83,8 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
         async with session.post(url, data=request.content,
                                 headers={
                                     "Authorization": request.app.settings['slave_key'],
-                                    "Content-Type": request.headers.get("Content-Type")
+                                    "Content-Type": request.headers.get("Content-Type"),
+                                    "File-Name": request.headers.get("File-Name", "upload.jpg")
                                 }) as resp:
             if resp.status == 600:
                 return web.Response(status=400, reason=await resp.text())
