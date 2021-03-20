@@ -165,7 +165,7 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
             username = data['username']
         else:
             username = auth
-        if username != auth and not utils.route_allowed(perms, "users.manage"):
+        if username != auth and (not admin and not utils.route_allowed(perms, "users.manage")):
             return web.Response(reason="401 Unauthorized", status=401)
     except:
         return web.Response(reason="Invalid JSON", status=400)
