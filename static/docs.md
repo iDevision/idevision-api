@@ -121,7 +121,7 @@ ___
 This endpoint allows you to upload content to the idevision cdn. 
 
 ### Ratelimit
-6 requests per 60 seconds (6/60s).
+6 requests per 7 seconds (6/7).
 Exceeding this api by double (12/60) will result in an automatic api ban and disabling of your account.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
