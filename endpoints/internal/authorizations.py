@@ -171,7 +171,7 @@ async def generate_token(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(reason="Invalid JSON", status=400)
 
     new_token = f"user.{username}.{secrets.token_urlsafe(25)}"
-    if await conn.fetchval("UPDATE auths SET auth_token = $1 WHERE username = $2 RETURNING username", new_token, username) is not None:
+    if await conn.fetchval("UPDATE auths SET auth_key = $1 WHERE username = $2 RETURNING username", new_token, username) is not None:
         return web.json_response({"token": new_token})
     else:
         return web.Response(status=400, reason="Account not found")
