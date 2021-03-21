@@ -17,14 +17,18 @@ router = web.RouteTableDef()
 @router.get("/api/cdn")
 @ratelimit(20, 60)
 async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
-    amount = await conn.fetchrow("SELECT "
-        "(SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount, "
-        "(SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount;")
+    amount = await conn.fetchrow("""
+    SELECT
+        (SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount,
+        (SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount,
+        (SELECT 'https://{child_site}/' | slaves.name | '/' | uploads.key FROM uploads INNER JOIN slaves ON 
+            slaves.node = uploads.node ORDER BY time DESC LIMIT 1) as last_upload;
+    """)
 
     return web.json_response({
         "upload_count": amount['allcount'],
         "uploaded_today": amount['todaycount'],
-        "last_upload": request.app.last_upload
+        "last_upload": amount['last_upload'].format(child_site=request.app.settings['child_site'])
     })
 
 @router.post("/api/cdn")
@@ -102,7 +106,7 @@ async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
         "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5,$6,false,$7)",
         new_name, auth, datetime.datetime.utcnow(), allowed_auths, path, node, size
     )
-    request.app.last_upload = new_name
+    request.app.last_upload = f"https://{request.app.settings['child_site']}/{target['name']}/{new_name}"
 
     return web.json_response({
         "url": f"https://{request.app.settings['child_site']}/{target['name']}/{new_name}",
