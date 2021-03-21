@@ -26,8 +26,6 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
         print(e)
         return web.Response(status=400, text="Bad json")
 
-    print(data)
-
     node = data.get("node", None)
     if node is not None:
         try:
