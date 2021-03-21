@@ -21,7 +21,7 @@ async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
     SELECT
         (SELECT COUNT(*) FROM uploads WHERE deleted is false) AS allcount,
         (SELECT COUNT(*) FROM uploads WHERE time > ((now() at time zone 'utc') - INTERVAL '1 day')) AS todaycount,
-        (SELECT 'https://{child_site}/' | slaves.name | '/' | uploads.key FROM uploads INNER JOIN slaves ON 
+        (SELECT cast('https://{child_site}/' as text) || slaves.name || cast('/' as text) || uploads.key FROM uploads INNER JOIN slaves ON 
             slaves.node = uploads.node ORDER BY time DESC LIMIT 1) as last_upload;
     """)
 
