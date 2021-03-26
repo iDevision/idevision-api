@@ -171,7 +171,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
             target = n
 
     if target is None:
-        return web.Response(status=400, reason="Node is unavailable or does not exist")
+        return web.Response(status=400, reason=f"Node '{node}' is unavailable or does not exist")
 
     if admin or utils.route_allowed(perms, "cdn.manage"):
         coro = conn.fetchrow(
