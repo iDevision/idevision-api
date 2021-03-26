@@ -177,14 +177,14 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
         coro = conn.fetchrow(
             "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 RETURNING *;",
             request.match_info.get("slug"),
-            node
+            target['id']
         )
 
     else:
         coro = conn.fetchrow(
             "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 AND username = $3 RETURNING *;",
             request.match_info.get("image"),
-            node,
+            target['id'],
             auth
         )
     if not await coro:
