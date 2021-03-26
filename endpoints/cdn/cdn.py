@@ -193,7 +193,6 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
 
         return web.Response(status=401, reason="401 Unauthorized")
 
-    target = request.app.slaves[node]
     url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("delete")
 
     async with aiohttp.ClientSession() as session:
