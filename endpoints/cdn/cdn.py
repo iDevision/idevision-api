@@ -166,7 +166,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(reason="401 Unauthorized", status=401)
 
     target = None
-    for n in request.app.slaves:
+    for n in request.app.slaves.values():
         if node == n['name']:
             target = n
 
