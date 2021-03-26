@@ -198,10 +198,10 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     async with aiohttp.ClientSession() as session:
         async with session.post(
                 url,
-                data=request.match_info.get("image"),
+                data=request.match_info.get("slug"),
                 headers={"Authorization": request.app.settings['slave_key']}
         ) as resp:
-            return web.Response(status=resp.status)
+            return web.Response(status=resp.status, reason=resp.reason)
 
 @router.post("/api/cdn/purge")
 @ratelimit(1, 1, "cdn.manage")
