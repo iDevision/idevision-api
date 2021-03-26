@@ -198,7 +198,7 @@ async def delete_image(request: utils.TypedRequest, conn: asyncpg.Connection):
     async with aiohttp.ClientSession() as session:
         async with session.post(
                 url,
-                text=request.match_info.get("image"),
+                body=request.match_info.get("image"),
                 headers={"Authorization": request.app.settings['slave_key']}
         ) as resp:
             return web.Response(status=resp.status)
