@@ -144,9 +144,6 @@ class DocReader:
         await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3)", [(url, k, *v) for k, v in data.items()])
 
     async def do_rtfm(self, request, url, obj, labels=True, label_labels=False):
-        if obj is None:
-            return web.Response(status=400, reason="No search query provided")
-
         start = time.perf_counter()
 
         if not await request.conn.fetchrow("SELECT url FROM rtfm WHERE url = $1", url):
@@ -161,7 +158,7 @@ class DocReader:
         SELECT key, value, is_label FROM rtfm_lookup WHERE url = $1 AND SIMILARITY(key, $2) > 0.5 
         """
 
-        rows = await request.conn.fetch(query, )
+        rows = await request.conn.fetch(query, url, obj)
 
         end = time.perf_counter()
 
