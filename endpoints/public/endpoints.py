@@ -15,15 +15,20 @@ router = web.RouteTableDef()
 @router.get("/api/public/rtfs")
 @ratelimit(3, 5)
 async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
+    fmt = request.query.get("format", "links")
+    if fmt not in ("links", "source"):
+        return web.Response(status=400, reason="format must be one of 'links' or 'source'")
+
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
+
     lib = request.query.get("library", '').lower()
     if not lib:
         return web.Response(status=400, reason="Missing library parameter")
 
     try:
-        v = await request.app.rtfs.get_query(lib, query)
+        v = await request.app.rtfs.get_query(lib, query, fmt=="source")
         if v is None:
             return web.Response(status=400, reason="library not found. If you think it should be added, contact IAmTomahawkx#1000 on discord.")
         else:
