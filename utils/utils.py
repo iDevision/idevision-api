@@ -5,7 +5,6 @@ import pathlib
 from typing import Callable, Optional
 
 import asyncpg
-import aioredis
 from aiohttp import web
 
 from utils.rtfs import Indexes
@@ -45,7 +44,6 @@ class App(web.Application):
         else:
             try:
                 self.db: asyncpg.Pool = await asyncpg.create_pool(self.settings['db'])
-                self.redis: aioredis.Redis = aioredis.Commands(await aioredis.connect())
             except Exception as e:
                 self.stop()
                 raise RuntimeError("Failed to connect to the database") from e
