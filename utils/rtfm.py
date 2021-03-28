@@ -166,7 +166,7 @@ class DocReader:
         end = time.perf_counter()
 
         resp = {
-            "nodes": {f"label:{row['key']}" if label_labels and row['is_label'] else row['key']: row['value'] for row in rows},
+            "nodes": {f"label:{row['key']}" if label_labels and row['is_label'] else row['key']: row['value'] for row in rows if not row['is_label'] or (labels and row['is_label'])},
             "query_time": str(end-start)
         }
         return web.json_response(resp)
