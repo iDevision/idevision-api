@@ -3,9 +3,11 @@ import io
 import time
 import zlib
 import os
+import datetime
 
 import aiohttp
 from aiohttp import web
+from discord.ext import tasks
 
 class InteralError(Exception):
     pass
@@ -20,8 +22,9 @@ def finder(text, collection, labels=True, *, key=None, lazy=True):
     regex = re.compile(pat, flags=re.IGNORECASE)
     for item in collection:
         to_search = key(item) if key else item
-        if not labels and to_search.startswith("label:"):
+        if not labels and item[1][1]:
             continue
+
         r = regex.search(to_search)
         if r:
             suggestions.append((len(r.group()), r.start(), item))
@@ -75,6 +78,17 @@ class DocReader:
         self.usage = {}
         self._rtfm_cache = {}
         self.session = aiohttp.ClientSession(headers={"User-Agent": "Idevision.net Documentation Reader https://idevision.net/docs"})
+        self.offload_unused_cache.start()
+
+    def cog_unload(self):
+        self.offload_unused_cache.cancel()
+
+    @tasks.loop(minutes=1)
+    async def offload_unused_cache(self):
+        now = datetime.datetime.utcnow()
+        for key, i in self.usage.items():
+            if (now - i).total_seconds() >= 1200 and key in self._rtfm_cache:
+                del self._rtfm_cache[key]
 
     def parse_object_inv(self, stream, url) -> dict:
         # key: (URL, label)
@@ -126,9 +140,25 @@ class DocReader:
             else:
                 result[key] = os.path.join(url, location), False
 
+        self._rtfm_cache[url] = result
         return result
 
     async def build_rtfm_lookup_table(self, request, url):
+        if not await request.conn.fetchrow("SELECT url FROM rtfm WHERE url = $1", url):
+            try:
+                data = await self.build_table_scheme(request, url)
+            except InteralError as e:
+                return web.Response(status=500, reason=e.args[0])
+            except BadURL as e:
+                return web.Response(status=400, reason=e.args[0])
+
+        else:
+            data = await request.conn.fetch("SELECT key, value, is_label FROM rtfm_lookup WHERE url = $1", url)
+            data = {x['key']: (x['value'], x['is_label']) for x in data}
+
+        self._rtfm_cache[url] = data
+
+    async def build_table_scheme(self, request, url):
         try:
             async with self.session.get(url + '/objects.inv') as resp:
                 if resp.status != 200:
@@ -142,30 +172,27 @@ class DocReader:
         data = self.parse_object_inv(stream, url)
         await request.conn.execute("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week'))", url)
         v = [(url, k, *v) for k, v in data.items()]
-        print(v)
         await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3, $4)", v)
+        return data
 
     async def do_rtfm(self, request, url, obj, labels=True, label_labels=False):
         start = time.perf_counter()
 
-        if not await request.conn.fetchrow("SELECT url FROM rtfm WHERE url = $1", url):
+        self.usage[url] = datetime.datetime.utcnow()
+
+        if url not in self._rtfm_cache:
             try:
                 await self.build_rtfm_lookup_table(request, url)
-            except InteralError as e:
+            except RuntimeError as e:
                 return web.Response(status=500, reason=e.args[0])
-            except BadURL as e:
-                return web.Response(status=400, reason=e.args[0])
 
-        query = """
-        SELECT key, value, is_label FROM rtfm_lookup WHERE url = $1 AND SIMILARITY(key, $2) > 0.5 
-        """
+        cache = list(self._rtfm_cache[obj].items())
 
-        rows = await request.conn.fetch(query, url, obj)
-
+        matches = finder(obj, cache, labels, key=lambda t: t[0], lazy=False)[:8]
         end = time.perf_counter()
 
         resp = {
-            "nodes": {f"label:{row['key']}" if label_labels and row['is_label'] else row['key']: row['value'] for row in rows if not row['is_label'] or (labels and row['is_label'])},
+            "nodes": {f"label:{key}" if label_labels and is_label else key: u for key, (u, is_label) in matches},
             "query_time": str(end-start)
         }
         return web.json_response(resp)
