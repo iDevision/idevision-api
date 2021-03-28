@@ -141,7 +141,9 @@ class DocReader:
 
         data = self.parse_object_inv(stream, url)
         await request.conn.execute("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week'))", url)
-        await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3, $4)", [(url, k, *v) for k, v in data.items()])
+        v = [(url, k, *v) for k, v in data.items()]
+        print(v)
+        await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3, $4)", v)
 
     async def do_rtfm(self, request, url, obj, labels=True, label_labels=False):
         start = time.perf_counter()
