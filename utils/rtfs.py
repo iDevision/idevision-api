@@ -179,7 +179,7 @@ class Indexes:
         "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/", discord),
         "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/", twitchio),
         "wavelink": Index(f"https://github.com/PythonistaGuild/Wavelink/v{wavelink.__version__.strip('a')}/", wavelink),
-        "aiohttp": Index(f"https://github.com/aio-libs/aiohttp/v{aiohttp.__version__.strip('a')}/", aiohttp)
+        "aiohttp": Index(f"https://github.com/aio-libs/aiohttp/blob/v{aiohttp.__version__.strip('a')}/", aiohttp)
     }
     def __init__(self):
         self.index = {}
