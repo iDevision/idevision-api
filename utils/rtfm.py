@@ -186,7 +186,7 @@ class DocReader:
             except RuntimeError as e:
                 return web.Response(status=500, reason=e.args[0])
 
-        cache = list(self._rtfm_cache[obj].items())
+        cache = list(self._rtfm_cache[url].items())
 
         matches = finder(obj, cache, labels, key=lambda t: t[0], lazy=False)[:8]
         end = time.perf_counter()
