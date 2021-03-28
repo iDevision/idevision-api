@@ -65,6 +65,7 @@ class Ratelimiter:
 
     async def _wrap_call(self, request: utils.TypedRequest):
         async with request.app.db.acquire() as conn:
+            request.conn = conn
             resp, login, did_ban = await self.do_call(request, conn)
             if did_ban or resp.status != 403:
                 await conn.execute(

@@ -76,3 +76,13 @@ create table cdn_logs (
     authorized_user text,
     response_code integer not null
 );
+create table rtfm (
+    url text primary key,
+    expiry timestamp not null default ((now() at time zone 'utc') + INTERVAL '1 week')
+);
+create table rtfm_lookup (
+    url text not null references rtfm(url) ON DELETE CASCADE,
+    key text not null,
+    value text not null,
+    is_label boolean not null
+);

@@ -5,6 +5,7 @@ import pathlib
 from typing import Callable, Optional
 
 import asyncpg
+import aioredis
 from aiohttp import web
 
 from utils.rtfs import Indexes
@@ -33,7 +34,6 @@ class App(web.Application):
 
         self.slaves = {}
         self.rtfs = Indexes()
-        #self.on_startup.append(self.rtfs._do_index)
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -45,9 +45,10 @@ class App(web.Application):
         else:
             try:
                 self.db: asyncpg.Pool = await asyncpg.create_pool(self.settings['db'])
-            except:
+                self.redis: aioredis.Redis = aioredis.Commands(await aioredis.connect())
+            except Exception as e:
                 self.stop()
-                raise RuntimeError("Failed to connect to the database")
+                raise RuntimeError("Failed to connect to the database") from e
 
             self._task = self._loop.create_task(self.offline_task())
 
@@ -96,3 +97,4 @@ class TypedRequest(web.Request):
     app: App
     user: Optional[dict]
     username: Optional[str]
+    conn: asyncpg.Connection

@@ -7,6 +7,10 @@ You can apply for a token to the OCR API by using the `idevision apply` command 
 You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discretion.
 For any other endpoints, please message IAmTomahawkx#1000 on discord.
 
+---
+# Support
+Support is available via [discord](https://discord.gg/xYSRTrjUun "Idevision support server")
+
 ___
 
 # Public Endpoints
@@ -20,9 +24,18 @@ If you have a module you wish to be included in the rtfs index, please contact m
 Exceeding this api by double (6/5s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
+### Available Libraries (in no particular order)
+- twitchio
+- wavelink
+- discord.py
+- aiohttp
+
 ### Required Query parameters
 - query : The actual query
-- library : The module to find source for. One of twitchio, wavelink, or discord.py
+- library : The library to find source for
+
+### Optional Query parameters
+- format : the format to return the data as. Can be one of `links` (returns links to the github source) or `source` (returns the source itself). Defaults to `links`
 
 ### Returns
 Response 200
@@ -45,8 +58,10 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 ### Required Query parameters
 - query : The actual query
 - location : The location of the documentation. This can be any sphinx generated documentation. Ex. https://discordpy.readthedocs.io/en/latest
-- show-labels : a boolean. When false, labels will not be returned in the results
-- label-labels : a boolean. When true, labels will have `label:` prepended to them. Does nothing when show-labels is false
+
+### Optional Query parameters
+- show-labels : a boolean. When false, labels will not be returned in the results. Defaults to `true`
+- label-labels : a boolean. When true, labels will have `label:` prepended to them. Does nothing when show-labels is false. Defaults to `false`
 
 ### Returns
 Response 200
@@ -65,6 +80,8 @@ ___
 This endpoint takes a multipart file, and returns the contents of the image as text.
 > this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint.
 > Only two images are processed at a time (globally).
+
+Note that this model currently does not work well with dark backgrounds.
 
 ### Ratelimit
 2 requests per 10 seconds (2/10s).

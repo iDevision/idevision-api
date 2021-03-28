@@ -2,12 +2,16 @@ import re
 import io
 import time
 import zlib
-import datetime
 import os
 
 import aiohttp
 from aiohttp import web
-from discord.ext import tasks
+
+class InteralError(Exception):
+    pass
+
+class BadURL(Exception):
+    pass
 
 def finder(text, collection, labels=True, *, key=None, lazy=True):
     suggestions = []
@@ -71,20 +75,9 @@ class DocReader:
         self.usage = {}
         self._rtfm_cache = {}
         self.session = aiohttp.ClientSession(headers={"User-Agent": "Idevision.net Documentation Reader https://idevision.net/docs"})
-        self.offload_unused_cache.start()
 
-    def cog_unload(self):
-        self.offload_unused_cache.cancel()
-
-    @tasks.loop(minutes=1)
-    async def offload_unused_cache(self):
-        now = datetime.datetime.utcnow()
-        for key, i in self.usage.items():
-            if (now-i).total_seconds() >= 1200 and key in self._rtfm_cache:
-                del self._rtfm_cache[key]
-
-    def parse_object_inv(self, stream, url):
-        # key: URL
+    def parse_object_inv(self, stream, url) -> dict:
+        # key: (URL, label)
         result = {}
 
         # first line is version info
@@ -101,7 +94,7 @@ class DocReader:
         # next line says if it's a zlib header
         line = stream.readline()
         if 'zlib' not in line:
-            raise RuntimeError('Invalid objects.inv file, not z-lib compatible.')
+            raise BadURL('Invalid objects.inv file, not z-lib compatible.')
 
         # This code mostly comes from the Sphinx repository.
         entry_regex = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+(\S+)\s+(.*)')
@@ -129,49 +122,51 @@ class DocReader:
 
             key = name if dispname == '-' else dispname
             if subdirective == "label":
-                key = "label:"+key
-
-            result[key] = os.path.join(url, location)
+                result[key] = os.path.join(url, location), True
+            else:
+                result[key] = os.path.join(url, location), False
 
         return result
 
-    async def build_rtfm_lookup_table(self, url):
+    async def build_rtfm_lookup_table(self, request, url):
+        try:
+            async with self.session.get(url + '/objects.inv') as resp:
+                if resp.status != 200:
+                    raise BadURL(f'No objects.inv found at {url}/objects.inv')
 
-        cache = {}
+                stream = SphinxObjectFileReader(await resp.read())
 
-        async with self.session.get(url + '/objects.inv') as resp:
-            if resp.status != 200:
-                raise RuntimeError(f'Cannot build rtfm lookup table, try again later. (no objects.inv found at {url}/objects.inv)')
+        except aiohttp.TooManyRedirects:
+            raise InteralError(f"Cannot fetch lookup table for {url}; we are being ratelimited. Try again later")
 
-            stream = SphinxObjectFileReader(await resp.read())
-            cache[url] = self.parse_object_inv(stream, url)
+        data = self.parse_object_inv(stream, url)
+        await request.conn.execute("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week'))", url)
+        await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3)", [(url, k, *v) for k, v in data.items()])
 
-        if self._rtfm_cache is None:
-            self._rtfm_cache = cache
-        else:
-            self._rtfm_cache.update(cache)
-
-    async def do_rtfm(self, key, obj, labels=True, label_labels=False):
+    async def do_rtfm(self, request, url, obj, labels=True, label_labels=False):
         if obj is None:
             return web.Response(status=400, reason="No search query provided")
 
         start = time.perf_counter()
-        self.usage[key] = datetime.datetime.utcnow()
 
-        if key not in self._rtfm_cache:
+        if not await request.conn.fetchrow("SELECT url FROM rtfm WHERE url = $1", url):
             try:
-                await self.build_rtfm_lookup_table(key)
-            except RuntimeError as e:
+                await self.build_rtfm_lookup_table(request, url)
+            except InteralError as e:
                 return web.Response(status=500, reason=e.args[0])
+            except BadURL as e:
+                return web.Response(status=400, reason=e.args[0])
 
-        cache = list(self._rtfm_cache[key].items())
+        query = """
+        SELECT key, value, is_label FROM rtfm_lookup WHERE url = $1 AND SIMILARITY(key, $2) > 0.5 
+        """
 
-        matches = finder(obj, cache, labels, key=lambda t: t[0], lazy=False)[:8]
+        rows = await request.conn.fetch(query, )
 
         end = time.perf_counter()
 
         resp = {
-            "nodes": {key.replace("label:", "") if not label_labels else key: url for key, url in matches},
+            "nodes": {f"label:{row['key']}" if label_labels and row['is_label'] else row['key']: row['value'] for row in rows},
             "query_time": str(end-start)
         }
         return web.json_response(resp)

@@ -3,7 +3,6 @@ import uuid
 import os
 
 import asyncpg
-from yarl import URL
 from aiohttp import web
 
 from utils.ratelimit import ratelimit
@@ -11,7 +10,6 @@ from utils.rtfm import DocReader
 from utils import ocr, utils
 
 reader = DocReader()
-
 router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
@@ -36,21 +34,17 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/rtfm")
 @ratelimit(3, 5)
 async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
-    show_labels = request.query.get("show-labels", "false").lower() == 'true'
-
+    show_labels = request.query.get("show-labels", "true").lower() == "true"
     label_labels = request.query.get("label-labels", "false").lower() == "true"
 
     location = request.query.get("location", None)
     if location is None:
         return web.Response(status=400, reason="Missing location parameter (The URL of the documentation)")
-    try:
-        location = URL(location)
-    except:
-        return web.Response(status=400, reason="Invalid location (bad URL)")
+
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
-    return await reader.do_rtfm(str(location), query, show_labels, label_labels)
+    return await reader.do_rtfm(location.strip("/"), query, show_labels, label_labels)
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)
