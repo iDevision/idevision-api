@@ -78,8 +78,6 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
                 yield v
 
     except AssertionError:
-        return web.Response(status=400, reason="Expected a Multipart request")
-    except:
         async def data():
             while True:
                 v = await request.content.read(32)
@@ -87,6 +85,8 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
                     break
 
                 yield v
+    except:
+        return web.Response(reason="Invalid multipart request", status=400)
 
     name = ('%032x' % uuid.uuid4().int)[:8] + "." + ext
     pth = pathlib.Path(f"../tmp/{name}")
