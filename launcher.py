@@ -1,4 +1,5 @@
-from aiohttp import web
+import asyncio
+import aiohttp
 import datetime
 import aiohttp_jinja2
 import jinja2
@@ -8,6 +9,16 @@ import subprocess
 import markdown2
 import setproctitle
 import logging
+import json
+from aiohttp import web
+
+if "--close" in sys.argv:
+    with open("config.json") as f:
+        data = json.load(f)
+    c = aiohttp.ClientSession()
+    asyncio.get_event_loop().run_until_complete(c.post(f"http://127.0.0.1:{data['port']}/_internal/stop", data=data['slave_key']))
+    asyncio.get_event_loop().run_until_complete(c.close())
+    sys.exit(0)
 
 logger = logging.getLogger("site")
 logger.setLevel(10)
@@ -87,17 +98,15 @@ async def usercontent_upload(request: utils.TypedRequest):
     return web.json_response({"url": f"https://container.idevision.net/{auth}/{filename}"}, status=200)
 
 
-@router.post("/api/git/checks")
-async def git_checks(request: utils.TypedRequest):
-    data = await request.json()
+@router.post("/_internal/stop")
+async def stop(request: web.Request):
+    if request.remote != "127.0.0.1":
+        return web.Response(status=401)
 
-    if data['action'] == "completed" and data['check_run']['conclusion'] == "success":
-        import subprocess
-        subprocess.run(["/usr/bin/git", "pull", "origin", "master"])
-        print(f"restart from {request.headers['x-forwarded-ip']}", file=sys.stderr)
-        request.app.stop()
+    if await request.text() != app.settings['slave_key']:
+        return web.Response(status=401)
 
-    return web.Response()
+    app.stop()
 
 @router.get("/")
 async def home(_):
