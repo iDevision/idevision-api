@@ -1,4 +1,6 @@
-Idevision API Version 3.1
+Idevision API Version 3.2
+
+**Version 3.2 contains breaking changes to the /api/public/ocr endpoint**
 
 # Tokens
 tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available
@@ -77,11 +79,11 @@ ___
 
 * Requires an idevision API token with the `public.ocr` permission group
 
-This endpoint takes a multipart file, and returns the contents of the image as text.
+This endpoint takes an image as a bytes stream, and returns the contents of the image as text.
 > this endpoint may take longer to respond, depending on the amount of traffic flowing through the endpoint.
 > Only two images are processed at a time (globally).
 
-Note that this model currently does not work well with dark backgrounds.
+Note that this model currently does not work well with dark backgrounds. Inverting dark backgrounds before uploading will lead to much better results
 
 ### Ratelimit
 2 requests per 10 seconds (2/10s).
@@ -89,7 +91,7 @@ Exceeding this api by double (4/10s) will result in an automatic api ban (and di
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 ### Required Query parameters
-None
+- ext : the file extension of the uploaded file
 
 ### Returns
 Response 200

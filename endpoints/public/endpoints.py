@@ -63,28 +63,39 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
     if not admin and not utils.route_allowed(perms, "public.ocr"):
         return web.Response(reason="401 Unauthorized", status=401)
 
+    ext = request.query.get("filetype", None)
+    if ext is None:
+        return web.Response(reason="File-Type header is required.", status=400)
+
     try:
         reader = await request.multipart()
+        _data = await reader.next()
+        async def data():
+            while True:
+                v = await _data.read_chunk()
+                if not v:
+                    break
+                yield v
+
     except AssertionError:
         return web.Response(status=400, reason="Expected a Multipart request")
-
-    data = await reader.next()
-    try:
-        extension = data.filename.split(".").pop().replace("/", "")
     except:
-        return web.Response(status=400, reason="Invalid/No filename provided")
+        async def data():
+            while True:
+                v = await request.content.read(32)
+                if not v:
+                    break
 
-    name = ('%032x' % uuid.uuid4().int)[:8] + "." + extension
+                yield v
+
+    name = ('%032x' % uuid.uuid4().int)[:8] + "." + ext
     pth = pathlib.Path(f"../tmp/{name}")
     buffer = pth.open("wb")
-    while True:
-        try:
-            chunk = await data.read_chunk()
-            if not chunk:
-                break
+    try:
+        async for chunk in data():
             buffer.write(chunk)
-        except:
-            pass
+    except:
+        pass
 
     buffer.close()
 
