@@ -1,3 +1,4 @@
+import datetime
 import secrets
 
 import asyncpg
@@ -332,4 +333,10 @@ async def get_logs(request: utils.TypedRequest, conn: asyncpg.Connection):
     oldest_first = request.query.get("oldest-first", "").lower() == "true"
 
     data = await conn.fetch(f"SELECT * FROM logs ORDER BY accessed {'ASC' if oldest_first else 'DESC'} OFFSET $1 LIMIT 50;", page*50)
-    return web.json_response({"rows": [dict(x) for x in data]})
+    def hook(row):
+        d = dict(row)
+        for a, b in d.items():
+            if isinstance(b, datetime.datetime):
+                d[a] = b.isoformat()
+        return d
+    return web.json_response({"rows": [hook(x) for x in data]})
