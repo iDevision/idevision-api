@@ -312,3 +312,24 @@ async def create_ban(request: utils.TypedRequest, conn: asyncpg.Connection):
     reason = request.query.get("reason")
     await conn.fetchrow("INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", ip, useragent, reason)
     return web.Response(status=201)
+
+@router.get("/api/internal/logs")
+@ratelimit(1, 1, "logs")
+async def get_logs(request: utils.TypedRequest, conn: asyncpg.Connection):
+    if not request.user:
+        return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
+
+    if not admin and not utils.route_allowed(perms, "logs"):
+        return web.Response(reason="401 Unauthorized", status=401)
+
+    try:
+        page = int(request.query.get("page", "0"))
+    except:
+        return web.Response(reason="page must be a number", status=400)
+
+    oldest_first = request.query.get("oldest-first", "").lower() == "true"
+
+    data = await conn.fetch(f"SELECT * FROM logs ORDER BY accessed {'ASC' if oldest_first else 'DESC'} OFFSET $1 LIMIT 50;", page*50)
+    return web.json_response({"rows": [dict(x) for x in data]})
