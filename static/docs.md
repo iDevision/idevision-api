@@ -91,7 +91,7 @@ Exceeding this api by double (4/10s) will result in an automatic api ban (and di
 Please follow the ratelimit-retry-after headers when you receive a 429 response code.
 
 ### Required Query parameters
-- ext : the file extension of the uploaded file
+- filetype : the file extension of the uploaded file
 
 ### Returns
 Response 200
