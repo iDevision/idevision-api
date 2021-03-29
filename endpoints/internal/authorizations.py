@@ -227,9 +227,10 @@ async def add_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/internal/users/deauth")
 @ratelimit(1, 1, "users.manage")
 async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
         return web.Response(reason="401 Unauthorized", status=401)
@@ -246,9 +247,10 @@ async def deauth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/internal/users/auth")
 @ratelimit(1, 1, "users.manage")
 async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.manage"):
         return web.Response(reason="401 Unauthorized", status=401)
@@ -264,9 +266,10 @@ async def auth_user(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.get("/api/internal/bans")
 @ratelimit(10, 10, "users.bans")
 async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.bans"):
         return web.Response(reason="401 Unauthorized", status=401)
@@ -296,9 +299,10 @@ async def get_bans(request: utils.TypedRequest, conn: asyncpg.Connection):
 @router.post("/api/internal/bans")
 @ratelimit(1, 1, "users.bans")
 async def create_ban(request: utils.TypedRequest, conn: asyncpg.Connection):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
+    if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
+
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
     if not admin and not utils.route_allowed(perms, "users.bans"):
         return web.Response(reason="401 Unauthorized", status=401)
