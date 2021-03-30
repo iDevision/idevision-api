@@ -65,7 +65,7 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
 
     ext = request.query.get("filetype", None)
     if ext is None:
-        return web.Response(reason="File-Type header is required.", status=400)
+        return web.Response(reason="File-Type query arg is required.", status=400)
 
     try:
         reader = await request.multipart()
