@@ -10,7 +10,7 @@ pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="OCR_Worker")
 
 def _do_img(path):
     try:
-        return pytesseract.image_to_string(Image.open(path))
+        return pytesseract.image_to_string(Image.open(path), config="--tessdata-dir /opt/tessdata/")
     except RuntimeError:
         return None
 
