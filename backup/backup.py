@@ -64,7 +64,7 @@ async def catch_all_routes(_):
             data = json.loads(await f.read())
     except:
         return web.Response(status=503, reason="Service Unavailable",
-                            text="The Idevision website is currently offline due to an unknown error.")
+                            text="The Idevision website is currently offline due to an unknown error. (FNF)")
     else:
         try:
             return web.Response(
@@ -73,7 +73,7 @@ async def catch_all_routes(_):
             )
         except:
             return web.Response(status=503, reason="Service Unavailable",
-                                text="The Idevision website is currently offline due to an unknown error.")
+                                text="The Idevision website is currently offline due to an unknown error. (KE)")
 
 app.add_routes(r)
 
