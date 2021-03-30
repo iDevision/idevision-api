@@ -18,6 +18,12 @@ if "--close" in sys.argv:
     c = aiohttp.ClientSession()
     asyncio.get_event_loop().run_until_complete(c.post(f"http://127.0.0.1:{data['port']}/_internal/stop", data=data['slave_key']))
     asyncio.get_event_loop().run_until_complete(c.close())
+    with open("backup/message.json") as f:
+        json.dump({
+            "message": "The service is currently restarting.",
+            "status": 503
+        }, f)
+
     sys.exit(0)
 
 logger = logging.getLogger("site")

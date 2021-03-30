@@ -76,12 +76,6 @@ class App(web.Application):
             except: pass
             self._loop.stop()
 
-            with open("backup/message.json") as f:
-                json.dump({
-                    "message": "The service is currently restarting. Try again in 30 seconds.",
-                    "status": 503
-                }, f)
-
         self._loop.create_task(_stop())
 
 @web.middleware
