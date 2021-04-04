@@ -246,6 +246,7 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not admin and not utils.route_allowed(perms, "cdn.manage"):
         raise web.HTTPFound("/api/cdn/list/"+auth)
 
+    node = request.query.get("node", None)
     query = """
     SELECT
         key, node, slaves.name, username
@@ -254,7 +255,12 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
         ON slaves.node = uploads.node
     WHERE deleted IS false
     """
-    values = await conn.fetch(query)
+    vals = []
+    if node:
+        vals.append(node)
+        query += "AND uploads.node = (SELECT node FROM slaves WHERE name = $1)"
+
+    values = await conn.fetch(query, *vals)
     resp = {}
     for rec in values:
         if rec['username'] in resp:
