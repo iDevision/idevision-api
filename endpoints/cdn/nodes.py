@@ -10,7 +10,7 @@ def setup(app):
     app.add_routes(router)
 
 @router.post("/api/cdn/nodes")
-@ratelimit(20, 1)
+@ratelimit(20, 1, ignore_logging=True)
 async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
     if "Authorization" not in request.headers:
         return web.Response(status=401, text="Unauthorized")

@@ -49,10 +49,11 @@ _DEFAULT_DICT = {
 }
 
 class Ratelimiter:
-    __slots__ = "rate", "per", "ignore_perm", "cb", "map", "autoban", "auth_map", "auth_autoban"
-    def __init__(self, rate: int, per: int, callback, ignore_perms: str=None):
+    __slots__ = "rate", "per", "ignore_perm", "cb", "map", "autoban", "auth_map", "auth_autoban", "ignore_logging"
+    def __init__(self, rate: int, per: int, callback, ignore_perms: str=None, ignore_logging=False):
         self.rate = rate
         self.per = per
+        self.ignore_logging = ignore_logging
         self.ignore_perm = ignore_perms
         self.cb = callback
         self.map = Mapping.from_cooldown(rate, per, Bucket2.default)
@@ -67,7 +68,7 @@ class Ratelimiter:
         async with request.app.db.acquire() as conn:
             request.conn = conn
             resp, login, did_ban = await self.do_call(request, conn)
-            if did_ban or resp.status != 403:
+            if not self.ignore_logging and (did_ban or resp.status != 403):
                 await conn.execute(
                     "INSERT INTO logs VALUES ($1, (now() at time zone 'utc'), $2, $3, $4, $5)",
                     request.headers.get("X-Forwarded-For") or request.remote,
@@ -142,7 +143,7 @@ class Ratelimiter:
         response.headers.update({x: str(y) for x, y in headers.items()})
         return response, data['username'] if data else None, False
 
-def ratelimit(rate: int, per: int, ignore_perm: str=None):
+def ratelimit(rate: int, per: int, ignore_perm: str=None, ignore_logging=False):
     def wrapped(func):
-        return Ratelimiter(rate, per, func, ignore_perm)
+        return Ratelimiter(rate, per, func, ignore_perm, ignore_logging)
     return wrapped
