@@ -45,27 +45,26 @@ except:
     logger.warning("Failed to use uvloop")
 
 import endpoints
-from utils import utils
+from utils import utils, ratelimit
 
 setproctitle.setproctitle("Idevision site - Master")
 uptime = datetime.datetime.utcnow()
-test = "--unittest" in sys.argv
 
 app = utils.App()
 endpoints.setup(app)
 router = web.RouteTableDef()
 
-@router.post("/api/media/container/upload")
-async def usercontent_upload(request: utils.TypedRequest):
-    auth, routes = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
+@router.post("/api/files")
+@ratelimit(5, 20)
+async def usercontent_upload(request: utils.TypedRequest, conn):
+    if not request.user:
+        return web.Response(reason="401 Unauthorized", status=401)
 
-    if not utils.route_allowed(routes, "api/media/container"):
-        return web.Response(text="401 Unauthorized", status=401)
+    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
 
-    if test:
-        return web.Response(status=204)
+    if not admin and not utils.route_allowed(perms, "files"):
+        return web.Response(reason="401 Unauthorized", status=401)
+
 
     if not os.path.exists(f"/var/www/idevision/containers/{auth}"):
         os.makedirs(f"/var/www/idevision/containers/{auth}")
@@ -95,7 +94,7 @@ async def usercontent_upload(request: utils.TypedRequest):
         pth = os.path.join("/var/www/idevision/containers", auth, filename)
         with open(pth, "wb") as f:
             while True:
-                data = await request.content.read(120)
+                data = await request.content.read(128)
                 if not data:
                     break
 
