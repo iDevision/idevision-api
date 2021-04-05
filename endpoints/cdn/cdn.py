@@ -247,9 +247,13 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
         raise web.HTTPFound("/api/cdn/list/"+auth)
 
     node = request.query.get("node", None)
+    sort = request.query.get("sort", "user")
+    if sort not in ("user", "node", "nodename"):
+        return web.Response(reason="sort must be one of user, node, nodename", status=400)
+
     query = """
     SELECT
-        key, node, slaves.name, username
+        key, uploads.node, slaves.name, username
     FROM uploads
     INNER JOIN slaves
         ON slaves.node = uploads.node
@@ -258,15 +262,30 @@ async def get_cdn_list(request: utils.TypedRequest, conn: asyncpg.Connection):
     vals = []
     if node:
         vals.append(node)
-        query += "AND uploads.node = (SELECT node FROM slaves WHERE name = $1)"
+        query += "AND uploads.node = (SELECT slaves.node FROM slaves WHERE slaves.name = $1)"
 
     values = await conn.fetch(query, *vals)
     resp = {}
-    for rec in values:
-        if rec['username'] in resp:
-            resp[rec['username']].append({"key": rec['key'], "node": rec['name']})
-        else:
-            resp[rec['username']] = [{"key": rec['key'], "node": rec['name']}]
+    if sort == "user":
+        for rec in values:
+            if rec['username'] in resp:
+                resp[rec['username']].append({"key": rec['key'], "node_id": rec['node'], "node": rec['name']})
+            else:
+                resp[rec['username']] = [{"key": rec['key'], "node_id": rec['node'], "node": rec['name']}]
+
+    elif sort == "node":
+        for rec in values:
+            if rec['node'] in resp:
+                resp[rec['node']].append({"key": rec['key'], "node_id": rec['node'], "node": rec['name']})
+            else:
+                resp[rec['node']] = [{"key": rec['key'], "node_id": rec['node'], "node": rec['name']}]
+
+    elif sort == "nodename":
+        for rec in values:
+            if rec['name'] in resp:
+                resp[rec['name']].append({"key": rec['key'], "node_id": rec['node'], "node": rec['name']})
+            else:
+                resp[rec['name']] = [{"key": rec['key'], "node_id": rec['node'], "node": rec['name']}]
 
     return web.json_response(resp)
 
