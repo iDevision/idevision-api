@@ -79,7 +79,7 @@ class Ratelimiter:
                 )
             return resp
 
-    async def do_call(self, request: utils.TypedRequest, conn):
+    async def do_call(self, request: utils.TypedRequest, conn) -> Tuple[web.Response, Optional[str], bool]:
         ip = request.headers.get("X-Forwarded-For") or request.remote
         # cant do this in 1 query :/
         data = await conn.fetchrow("SELECT reason FROM bans WHERE ip = $1", ip)
@@ -89,6 +89,9 @@ class Ratelimiter:
             return web.Response(status=403, reason=data['reason']), None, False
 
         _d = await conn.fetchrow("SELECT * FROM auths WHERE auth_key = $1", request.headers.get("Authorization"))
+        if _d is None and request.headers.get("Authorization", None) is not None:
+            return web.Response(reason="Invalid Authorization", status=401), None, False
+
         request.user = _d
         _d = dict(_d) if _d else {}
         data.update(_d)
