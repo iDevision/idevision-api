@@ -19,10 +19,15 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
         return web.Response(status=400, reason="format must be one of 'links' or 'source'")
 
     query = request.query.get("query", None)
+
+    lib = request.query.get("library", '').lower()
+
+    if query is None and not lib:
+        return web.json_response({"libraries": request.app.rtfs.lib_index, "notice": "The 'query' and 'lib' parameters must be provided to preform a search"}, status=200)
+
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
 
-    lib = request.query.get("library", '').lower()
     if not lib:
         return web.Response(status=400, reason="Missing library parameter")
 

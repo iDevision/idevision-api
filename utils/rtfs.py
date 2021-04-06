@@ -195,6 +195,12 @@ class Indexes:
     def libs(self):
         return ", ".join(self.__indexable.keys())
 
+    @property
+    def lib_index(self):
+        return {
+            x: y.lib.__version__ for x, y in self.__indexable.items()
+        }
+
     def get_query(self, lib: str, query: str, as_text: bool = False):
         if not self._is_indexed:
             raise RuntimeError("Indexing is not complete")
