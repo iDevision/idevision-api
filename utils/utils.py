@@ -72,6 +72,13 @@ class App(web.Application):
 
     def stop(self):
         self._closing = True
+        p = pathlib.Path("backup/message.json")
+        with p.open("w") as f:
+            json.dump({
+                "message": "Server Restarting",
+                "status": 503
+            }, f)
+
         async def _stop():
             await asyncio.sleep(3) # finish up pending requests
             try:
