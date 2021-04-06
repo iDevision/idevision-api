@@ -78,7 +78,8 @@ create table cdn_logs (
 );
 create table rtfm (
     url text primary key,
-    expiry timestamp not null default ((now() at time zone 'utc') + INTERVAL '1 week')
+    expiry timestamp not null default ((now() at time zone 'utc') + INTERVAL '1 week'),
+    indexed timestamp not null default (now() at time zone 'utc')
 );
 create table rtfm_lookup (
     url text not null references rtfm(url) ON DELETE CASCADE,

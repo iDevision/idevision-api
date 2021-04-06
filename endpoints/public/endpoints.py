@@ -9,7 +9,6 @@ from utils.ratelimit import ratelimit
 from utils.rtfm import DocReader
 from utils import ocr, utils
 
-reader = DocReader()
 router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
@@ -49,7 +48,7 @@ async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
     query = request.query.get("query", None)
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
-    return await reader.do_rtfm(request, location.strip("/"), query, show_labels, label_labels)
+    return await request.app.rtfm.do_rtfm(request, location.strip("/"), query, show_labels, label_labels)
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)

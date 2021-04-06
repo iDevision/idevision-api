@@ -8,6 +8,7 @@ import asyncpg
 from aiohttp import web
 
 from utils.rtfs import Indexes
+from utils.rtfm import DocReader
 
 test = "--unittest" in sys.argv
 
@@ -32,7 +33,6 @@ class App(web.Application):
             self.settings = json.load(f)
 
         self.slaves = {}
-        self.rtfs = Indexes()
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -61,6 +61,9 @@ class App(web.Application):
                     "message": "The Idevision website is currently offline due to an unknown error.",
                     "status": 503
                 }, msg)
+
+        self.rtfs = Indexes()
+        self.rtfm = DocReader(self)
 
     async def offline_task(self):
         while True:

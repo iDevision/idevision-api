@@ -1,3 +1,4 @@
+import asyncio
 import re
 import io
 import time
@@ -74,21 +75,22 @@ class SphinxObjectFileReader:
 
 
 class DocReader:
-    def __init__(self):
+    def __init__(self, app):
         self.usage = {}
         self._rtfm_cache = {}
         self.session = aiohttp.ClientSession(headers={"User-Agent": "Idevision.net Documentation Reader https://idevision.net/docs"})
-        self.offload_unused_cache.start()
+        self.db = app.db
+        app.loop.create_task(self.offload_unused_cache())
 
-    def cog_unload(self):
-        self.offload_unused_cache.cancel()
-
-    @tasks.loop(minutes=1)
     async def offload_unused_cache(self):
-        now = datetime.datetime.utcnow()
-        for key, i in self.usage.items():
-            if (now - i).total_seconds() >= 1200 and key in self._rtfm_cache:
-                del self._rtfm_cache[key]
+        while True:
+            await asyncio.sleep(600)
+            await self.db.execute("DELETE FROM rtfm CASCADE WHERE expiry <= (now() at time zone 'utc')")
+
+            now = datetime.datetime.utcnow()
+            for key, i in self.usage.items():
+                if (now - i).total_seconds() >= 1200 and key in self._rtfm_cache:
+                    del self._rtfm_cache[key]
 
     def parse_object_inv(self, stream, url) -> dict:
         # key: (URL, label)
@@ -140,13 +142,18 @@ class DocReader:
             else:
                 result[key] = os.path.join(url, location), False
 
-        self._rtfm_cache[url] = result
         return result
 
     async def build_rtfm_lookup_table(self, request, url):
-        if not await request.conn.fetchrow("SELECT url FROM rtfm WHERE url = $1", url):
+        exists = await request.conn.fetchrow("SELECT indexed FROM rtfm WHERE url = $1", url)
+        if not exists:
             try:
-                data = await self.build_table_scheme(request, url)
+                data, expires = await self.build_table_scheme(request, url)
+                data = {
+                    "index": data,
+                    "indexed": datetime.datetime.utcnow(),
+                    "expiry": expires
+                }
             except InteralError as e:
                 return web.Response(status=500, reason=e.args[0])
             except BadURL as e:
@@ -154,7 +161,11 @@ class DocReader:
 
         else:
             data = await request.conn.fetch("SELECT key, value, is_label FROM rtfm_lookup WHERE url = $1", url)
-            data = {x['key']: (x['value'], x['is_label']) for x in data}
+            data = {
+                "index": {x['key']: (x['value'], x['is_label']) for x in data},
+                "indexed": exists['indexed'],
+                "expiry": exists["expiry"]
+            }
 
         self._rtfm_cache[url] = data
 
@@ -170,10 +181,10 @@ class DocReader:
             raise InteralError(f"Cannot fetch lookup table for {url}; we are being ratelimited. Try again later")
 
         data = self.parse_object_inv(stream, url)
-        await request.conn.execute("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week'))", url)
+        expires = await request.conn.fetchval("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week')) RETURNING expires", url)
         v = [(url, k, *v) for k, v in data.items()]
         await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3, $4)", v)
-        return data
+        return data, expires
 
     async def do_rtfm(self, request, url, obj, labels=True, label_labels=False):
         start = time.perf_counter()
@@ -186,13 +197,15 @@ class DocReader:
             except RuntimeError as e:
                 return web.Response(status=500, reason=e.args[0])
 
-        cache = list(self._rtfm_cache[url].items())
+        cache = list(self._rtfm_cache[url]['index'].items())
 
         matches = finder(obj, cache, labels, key=lambda t: t[0], lazy=False)[:8]
         end = time.perf_counter()
 
         resp = {
             "nodes": {f"label:{key}" if label_labels and is_label else key: u for key, (u, is_label) in matches},
-            "query_time": str(end-start)
+            "query_time": str(end-start),
+            "_cache_indexed": self._rtfm_cache[url]['indexed'].isoformat(),
+            "_cache_expires": self._rtfm_cache[url]['expiry'].isoformat()
         }
         return web.json_response(resp)
