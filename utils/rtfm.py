@@ -145,7 +145,7 @@ class DocReader:
         return result
 
     async def build_rtfm_lookup_table(self, request, url):
-        exists = await request.conn.fetchrow("SELECT indexed FROM rtfm WHERE url = $1", url)
+        exists = await request.conn.fetchrow("SELECT indexed, expiry FROM rtfm WHERE url = $1", url)
         if not exists:
             try:
                 data, expires = await self.build_table_scheme(request, url)
