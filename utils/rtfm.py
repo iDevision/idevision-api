@@ -181,7 +181,7 @@ class DocReader:
             raise InteralError(f"Cannot fetch lookup table for {url}; we are being ratelimited. Try again later")
 
         data = self.parse_object_inv(stream, url)
-        expires = await request.conn.fetchval("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '1 week')) RETURNING expires", url)
+        expires = await request.conn.fetchval("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '3 days')) RETURNING expires", url)
         v = [(url, k, *v) for k, v in data.items()]
         await request.conn.executemany("INSERT INTO rtfm_lookup VALUES ($1, $2, $3, $4)", v)
         return data, expires
