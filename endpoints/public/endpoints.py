@@ -106,3 +106,9 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
     response = await ocr.do_ocr(pth, request.app.loop)
     os.remove(pth)
     return web.json_response({"data": response})
+
+
+@router.get("/api/public/xkcd")
+@ratelimit(10, 10)
+async def xkcd(request: utils.TypedRequest):
+    return web.Response(status=501)

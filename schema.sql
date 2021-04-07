@@ -87,3 +87,14 @@ create table rtfm_lookup (
     value text not null,
     is_label boolean not null
 );
+create table xkcd (
+    num integer primary key,
+    posted timestamp not null,
+    safe_title text not null,
+    title text not null,
+    alt text not null,
+    transcript text,
+    news text,
+    image_url text not null,
+    url text not null
+)
