@@ -111,4 +111,11 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/xkcd")
 @ratelimit(10, 10)
 async def xkcd(request: utils.TypedRequest):
-    return web.Response(status=501)
+    if not request.user or not request.user['admin']:
+        return web.Response(status=404)
+
+    query = request.query.get("search", None)
+    if not query:
+        return web.Response(reason="Missing 'search' query parameter", status=400)
+
+    return await request.app.xkcd.search_xkcd(query, request)

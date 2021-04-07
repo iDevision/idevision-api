@@ -9,6 +9,7 @@ from aiohttp import web
 
 from utils.rtfs import Indexes
 from utils.rtfm import DocReader
+from utils.xkcd import XKCD
 
 test = "--unittest" in sys.argv
 
@@ -64,6 +65,7 @@ class App(web.Application):
 
         self.rtfs = Indexes()
         self.rtfm = DocReader(self)
+        self.xkcd = XKCD(self)
 
     async def offline_task(self):
         while True:
