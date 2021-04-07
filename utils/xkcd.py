@@ -67,4 +67,4 @@ class XKCD:
             d['posted'] = d['posted'].isoformat()
             r.append(d)
 
-        return web.json_response({"nodes": t, "query_time": end-start})
+        return web.json_response({"nodes": r, "query_time": end-start})
