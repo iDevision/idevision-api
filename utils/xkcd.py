@@ -61,4 +61,10 @@ class XKCD:
         v = finder(query, list(self._cache.items()), key=lambda t: t[0])[:8]
         nodes = await request.conn.fetch("SELECT * FROM xkcd WHERE num = ANY($1)", v)
         end = time.time()
-        return web.json_response({"nodes": [dict(x) for x in nodes], "query_time": end-start})
+        r = []
+        for x in nodes:
+            d = dict(x)
+            d['posted'] = d['posted'].isoformat()
+            r.append(d)
+
+        return web.json_response({"nodes": t, "query_time": end-start})
