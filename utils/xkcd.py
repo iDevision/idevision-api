@@ -72,7 +72,6 @@ class XKCD:
         r = []
         for x in nodes:
             d = dict(x)
-            del d['extra_tags']
             d['posted'] = d['posted'].isoformat()
             r.append(d)
 
