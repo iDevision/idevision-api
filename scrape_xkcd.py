@@ -1,5 +1,6 @@
 import asyncpg
 import aiohttp
+import asyncio
 import datetime
 import json
 
@@ -31,3 +32,5 @@ async def main():
         print(f"run comic {i}")
         d = formatter(await _get(i))
         await db.execute("INSERT INTO xkcd VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", *d)
+
+asyncio.run(main())
