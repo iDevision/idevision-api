@@ -9,7 +9,7 @@ with open("config.json") as f:
 
 async def main():
     async def _get(_num):
-        async with session.get(f"https://xkcd.com/info.{_num}.json") as resp:
+        async with session.get(f"https://xkcd.com/{f'/{_num}/' if _num else ''}info.0.json") as resp:
             if 300 > resp.status >= 200:
                 return await resp.json()
             else:
@@ -25,7 +25,7 @@ async def main():
     session = aiohttp.ClientSession(headers={"User-Agent": "Idevision.net indexer"})
     db = await asyncpg.connect(conf['db'])
 
-    latest = await _get(0)
+    latest = await _get(None)
     top = latest['num']
 
     for i in range(1, top):
