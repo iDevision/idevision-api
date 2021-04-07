@@ -3,8 +3,11 @@ import asyncio
 import datetime
 import time
 import re
-from utils import utils
 from aiohttp import web
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from utils import utils
 
 # slight alterations to finder
 def finder(text, collection, *, key=None):
@@ -50,12 +53,12 @@ class XKCD:
             if v:
                 self._cache[v['title']] = v['num']
 
-    async def build(self, request: utils.TypedRequest):
+    async def build(self, request: "utils.TypedRequest"):
         data = await request.conn.fetch("SELECT num, title FROM xkcd")
         for v in data:
             self._cache[v['title']] = v['num']
 
-    async def search_xkcd(self, query: str, request: utils.TypedRequest) -> web.Response:
+    async def search_xkcd(self, query: str, request: "utils.TypedRequest") -> web.Response:
         start = time.time()
         if not self._cache:
             await self.build(request)
