@@ -52,6 +52,9 @@ class XKCD:
         data = await request.conn.fetch("SELECT num, title FROM xkcd")
         for v in data:
             self._cache[v['title']] = v['num']
+            for x in v['extra_tags']:
+                self._cache[x] = v['num']
+
 
     async def search_xkcd(self, query: str, request: "utils.TypedRequest") -> web.Response:
         start = time.time()
@@ -59,11 +62,17 @@ class XKCD:
             await self.build(request)
 
         v = finder(query, list(self._cache.items()), key=lambda t: t[0])[:8]
-        nodes = await request.conn.fetch("SELECT * FROM xkcd WHERE num = ANY($1)", v)
+        nodes = await request.conn.fetch(
+            "SELECT "
+            "num, posted, safe_title, title, alt, transcript, news, image_url, url "
+            "FROM xkcd WHERE num = ANY($1)",
+            v
+        )
         end = time.time()
         r = []
         for x in nodes:
             d = dict(x)
+            del d['extra_tags']
             d['posted'] = d['posted'].isoformat()
             r.append(d)
 

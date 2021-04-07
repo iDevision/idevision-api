@@ -96,5 +96,6 @@ create table xkcd (
     transcript text,
     news text,
     image_url text not null,
-    url text not null
+    url text not null,
+    extra_tags text[] not null default '{}'
 )
