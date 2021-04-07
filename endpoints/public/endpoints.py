@@ -110,7 +110,7 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
 
 @router.get("/api/public/xkcd")
 @ratelimit(10, 10)
-async def xkcd(request: utils.TypedRequest):
+async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user or not request.user['admin']:
         return web.Response(status=404)
 
