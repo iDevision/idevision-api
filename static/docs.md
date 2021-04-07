@@ -83,7 +83,9 @@ Response 200
 ```json
 {
     "nodes": {"Node name": "URL of the documentation"},
-    "query_time": "1.0"
+    "query_time": "1.0",
+    "_cache_indexed": "2021-04-07T05:54:47.939360",
+    "_cache_expires": "2021-04-07T05:54:47.939360"
 }
 ```
 ___
