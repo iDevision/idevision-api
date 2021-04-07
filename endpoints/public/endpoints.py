@@ -119,3 +119,30 @@ async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(reason="Missing 'search' query parameter", status=400)
 
     return await request.app.xkcd.search_xkcd(query, request)
+
+@router.put("/api/public/xkcd/tags")
+@ratelimit(2, 10)
+async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
+    if not request.user:
+        return web.Response(reason="You must log in to add tags to comics", status=401)
+
+    if not request.user['administrator']:
+        return web.Response(status=404)
+
+    try:
+        data = await request.json()
+        tag = str(data['tag']).lower()
+        num = int(data['num'])
+    except KeyError as e:
+        return web.Response(reason=f"Missing '{e.args[0]}' key from json payload", status=400)
+    except:
+        return web.Response(reason="Bad JSON payload", status=400)
+
+    d = await conn.fetchval("SELECT num FROM xkcd WHERE $1 = ANY(extra_tags)", tag)
+    if d:
+        return web.Response(reason=f"Tag '{tag}' is already bound to xkcd #{d}")
+
+    if not await conn.fetchval("UPDATE xkcd SET extra_tags = array_append(extra_tags, $1) WHERE num = $2 RETURNING num", tag, num):
+        return web.Response(reason=f"comic #{num} does not exist", status=400)
+
+    return web.Response(status=204)
