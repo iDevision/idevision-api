@@ -12,6 +12,8 @@ async def main():
         async with session.get(f"https://xkcd.com/{f'/{_num}/' if _num else ''}info.0.json") as resp:
             if 300 > resp.status >= 200:
                 return await resp.json()
+            elif resp.status == 404:
+                print(f"comic {_num} not found")
             else:
                 print(f"Failing at {_num}")
                 print(resp.status, resp.reason, resp.headers, await resp.text())
@@ -28,7 +30,7 @@ async def main():
     latest = await _get(None)
     top = latest['num']
 
-    for i in range(1, top):
+    for i in range(405, top):
         print(f"run comic {i}")
         d = formatter(await _get(i))
         await db.execute("INSERT INTO xkcd VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", *d)
