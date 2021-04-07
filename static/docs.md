@@ -1,6 +1,13 @@
-Idevision API Version 3.2
+Idevision API Version 3.3
 
-**Version 3.2 contains breaking changes to the /api/public/ocr endpoint**
+#####3.3
+- Added /api/public/xkcd
+- Added /api/public/xkcd/tags
+- Added cache status to rtfm response
+- Added module index when no query parameters passed to rtfs
+
+#####3.2
+- **Version 3.2 contains breaking changes to the /api/public/ocr endpoint**
 
 # Tokens
 tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available
