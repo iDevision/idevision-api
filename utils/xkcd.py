@@ -49,7 +49,7 @@ class XKCD:
                 self._cache[v['title']] = v['num']
 
     async def build(self, request: "utils.TypedRequest"):
-        data = await request.conn.fetch("SELECT num, title FROM xkcd")
+        data = await request.conn.fetch("SELECT num, title, extra_tags FROM xkcd")
         for v in data:
             self._cache[v['title']] = v['num']
             for x in v['extra_tags']:
