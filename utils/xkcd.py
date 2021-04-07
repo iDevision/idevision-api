@@ -20,14 +20,9 @@ def finder(text, collection, *, key=None):
 
         r = regex.search(to_search)
         if r:
-            suggestions.append((len(r.group()), r.start(), item))
+            suggestions.append((len(r.group()), r.start(), item[1]))
 
-    def sort_key(tup):
-        if key:
-            return tup[0], tup[1], key(tup[2])
-        return tup
-
-    return [z for _, _, z in sorted(suggestions, key=sort_key)]
+    return [z for _, _, z in sorted(suggestions)]
 
 
 class XKCD:
