@@ -33,6 +33,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 - aiohttp
 
 ### Required Query parameters
+(These are not strictly required, but are required to preform a search)
 - query : The actual query
 - library : The library to find source for
 
@@ -40,11 +41,23 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 - format : the format to return the data as. Can be one of `links` (returns links to the github source) or `source` (returns the source itself). Defaults to `links`
 
 ### Returns
-Response 200
+Response 200 (when query and library parameters passed)
 ```json
 {
     "nodes": {"Node name": "URL to source"},
     "query_time": "1.0"
+}
+```
+Response 200 (when no query parameters passed)
+```json
+{
+  "libraries": {
+    "discord.py": "1.7.1",
+    "twitchio": "1.2.2",
+    "wavelink": "0.9.9",
+    "aiohttp": "3.7.4.post0"
+  }, 
+  "notice": "The 'query' and 'lib' parameters must be provided to preform a search"
 }
 ```
 ___
@@ -101,6 +114,63 @@ Response 200
 }
 ```
 ___
+
+## GET /api/public/xkcd
+Allows you to search for xkcd webcomics by name.
+
+### Ratelimit
+10 requests per 10 seconds (10/10s).
+Exceeding this api by double (20/10s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Required Query parameters
+- query : the query to search for
+
+### Returns
+Response 200
+```json
+{
+  "nodes": [
+    {
+      "num": 123,
+      "posted": "2007-06-06T00:00:00",
+      "safe_title": "A Title",
+      "title": "A Title",
+      "alt": "Witty Comment",
+      "transcript": "Sometimes has a transcript of the comic",
+      "news": "Sometimes has site news",
+      "image_url": "https://imgs.xkcd.com/comics/...",
+      "url": "https://xkcd.com/123"
+    }
+  ],
+  "query_time": 0.011
+}
+```
+
+## PUT /api/public/xkcd/tags
+
+* Requires an idevision API token
+
+Allows you to add a tag to a comic number, which will change search results for the word.
+A tag may only exist once across all comics.
+
+### Ratelimit
+2 requests per 10 seconds (2/10s).
+Exceeding this api by double (4/10s) will result in an automatic api ban.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Payload
+```json
+{
+  "tag": "myword",
+  "num": 123
+}
+```
+num is the number of the comic to add the tag to.
+
+### Returns
+Response 204
+[Empty]
 
 ## POST /api/homepage
 * Requires an idevision API token

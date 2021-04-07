@@ -111,9 +111,6 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/xkcd")
 @ratelimit(10, 10)
 async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
-    if not request.user or not request.user['administrator']:
-        return web.Response(status=404)
-
     query = request.query.get("search", None)
     if not query:
         return web.Response(reason="Missing 'search' query parameter", status=400)
@@ -121,13 +118,10 @@ async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
     return await request.app.xkcd.search_xkcd(query, request)
 
 @router.put("/api/public/xkcd/tags")
-@ratelimit(2, 10)
+@ratelimit(1, 10)
 async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="You must log in to add tags to comics", status=401)
-
-    if not request.user['administrator']:
-        return web.Response(status=404)
 
     try:
         data = await request.json()
@@ -145,4 +139,5 @@ async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
     if not await conn.fetchval("UPDATE xkcd SET extra_tags = array_append(extra_tags, $1) WHERE num = $2 RETURNING num", tag, num):
         return web.Response(reason=f"comic #{num} does not exist", status=400)
 
+    request.app.xkcd._cache.clear()
     return web.Response(status=204)
