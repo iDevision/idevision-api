@@ -166,6 +166,8 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
         parse_time = time.time()-start
     except mathparser.UserInputError as f:
         return web.Response(text=str(f), status=417)
+    except ZeroDivisionError:
+        return web.Response(text="Division by 0 occurred", status=417)
 
     resp = ""
     start = time.time()

@@ -367,14 +367,14 @@ class Function:
         for chunk in self.chunks:
             validate_chunk(chunk)
 
-    def execute(self, parser: Parser, scope: dict):
+    def execute(self, _: Token, parser: Parser, scope: dict):
         return parser.do_math(self.chunks, scope)
 
     def __repr__(self):
         return f"<Function name={self.name} args={self.args} chunks={self.chunks}"
 
 class BuiltinFunction(Function):
-    def __init__(self, name: str, args: List[str], callback: Callable):
+    def __init__(self, name: str, args: List[str], callback: Callable): # noqa
         self.name = name
         self.args = args
         self.chunks = callback
@@ -382,8 +382,11 @@ class BuiltinFunction(Function):
     def validate(self, parser: Parser):
         pass
 
-    def execute(self, parser: Parser, scope: dict):
-        return self.chunks(parser, **scope)
+    def execute(self, token: Token, parser: Parser, scope: dict):
+        try:
+            return self.chunks(parser, **scope)
+        except ZeroDivisionError:
+            raise TokenizedUserInputError(parser.input, token, "Division by 0")
 
     def __repr__(self):
         return f"<BuiltinFunction name={self.name} args={self.args}>"
@@ -440,6 +443,6 @@ class FunctionCall:
                     else:
                         args[func.args[index]] = arg.value
 
-        return func.execute(parser, args)
+        return func.execute(self._start, parser, args)
 
 BUILTINS = Builtins()
