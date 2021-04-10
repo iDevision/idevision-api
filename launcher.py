@@ -129,6 +129,10 @@ logger.warning("Built docs.")
 async def _docs(_):
     return web.Response(text=docs, content_type="text/html")
 
+@router.get("/newdocs")
+async def _newdocs(_):
+    raise web.HTTPTemporaryRedirect("/static/redoc.html")
+
 @router.get("/robots.txt")
 async def robots(_):
     return web.FileResponse("static/robots.txt")

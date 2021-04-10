@@ -1,0 +1,420 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "IDevision",
+        "version": "3.3.0",
+        "contact": {
+            "email": "https://discord.gg/7NBADmuucF",
+            "name": "Idevision discord"
+        }
+    },
+    "paths": {
+        "/api/public/rtfm": {
+            "get": {
+                "description": "Indexes and searches a sphinx repository online for the given query, returning a list of close results. This endpoint has a ratelimit of 3 requests per 5 seconds. When passing a valid token, the ratelimit will be doubled to 6/5. Exceeding the ratelimit by double will result in an automatic ban from the api.",
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "schema": {
+                            "title": "Show Labels",
+                            "type": "boolean",
+                            "example": false,
+                            "description": "Whether labels should be shown at all"
+                        },
+                        "name": "show-labels",
+                        "in": "query"
+                    },
+                    {
+                        "required": false,
+                        "schema": {
+                            "title": "Label Labels",
+                            "description": "Whether labels should be explicitly labelled. Does nothing if show-labels is false",
+                            "example": false,
+                            "type": "boolean"
+                        },
+                        "name": "label-labels",
+                        "in": "query"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "title": "Location",
+                            "description": "The location of the documentation",
+                            "example": "https://discordpy.readthedocs.io/en/stable",
+                            "type": "string"
+                        },
+                        "name": "location",
+                        "in": "query"
+                    },
+                    {
+                        "required": true,
+                        "schema": {
+                            "title": "Query",
+                            "description": "The query to search the documentation for",
+                            "example": "Bot",
+                            "type": "string"
+                        },
+                        "name": "query",
+                        "in": "query"
+                    }
+                ],
+                "tags": [],
+                "summary": "RTFM",
+                "responses": {
+                    "200": {
+                        "description": "A list of names and urls",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RTFMResponse"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Check the response status text (reason) to see what was wrong."
+                    },
+                    "403": {
+                        "description": "You have been banned from the site. Contact me on discord if you wish to appeal.",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests. Try again after the cooldown",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/rtfs": {
+            "get": {
+                "summary": "RTFS",
+                "description": "Searches the source code of the specified package and returns functions and classes with fuzzy-matched names. This endpoint has a ratelimit of 3 requests per 5 seconds. When passing a valid token, the ratelimit will be doubled to 6/5. Exceeding the ratelimit by double will result in an automatic ban from the api.",
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "name": "library",
+                        "schema": {
+                            "title": "Library",
+                            "type": "string",
+                            "example": "discord.py",
+                            "description": "Which library to search. Currently available: discord.py, twitchio, wavelink, aiohttp"
+                        },
+                        "in": "query"
+                    }
+                ],
+                "tags": [],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RTFSResponse"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Check the response status text (reason) to see what was wrong."
+                    },
+                    "403": {
+                        "description": "You have been banned from the site. Contact me on discord if you wish to appeal.",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests. Try again after the cooldown",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "RTFMResponse": {
+                "title": "RTFMResponse",
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "title": "Nodes",
+                        "type": "object",
+                        "example": {
+                            "Bots": "https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#ext-commands-api-bot",
+                            "Creating a Bot Account": "https://discordpy.readthedocs.io/en/stable/discord.html#discord-intro",
+                            "discord.User.bot": "https://discordpy.readthedocs.io/en/stable/api.html#discord.User.bot",
+                            "Inviting Your Bot": "https://discordpy.readthedocs.io/en/stable/discord.html#discord-invite-bot",
+                            "discord.AppInfo.bot_public": "https://discordpy.readthedocs.io/en/stable/api.html#discord.AppInfo.bot_public",
+                            "discord.AppInfo.bot_require_code_grant": "https://discordpy.readthedocs.io/en/stable/api.html#discord.AppInfo.bot_require_code_grant",
+                            "discord.Role.is_bot_managed": "https://discordpy.readthedocs.io/en/stable/api.html#discord.Role.is_bot_managed",
+                            "discord.RoleTags.bot_id": "https://discordpy.readthedocs.io/en/stable/api.html#discord.RoleTags.bot_id"
+                        }
+                    },
+                    "query_time": {
+                        "title": "Query Time",
+                        "type": "integer",
+                        "example": 0.0025
+                    },
+                    "_cache_indexed": {
+                        "title": "Cache Index time",
+                        "type": "date-time",
+                        "example": "2021-04-09T22:48:42.207303"
+                    },
+                    "_cache_expires": {
+                        "title": "Cache Expiry time",
+                        "type": "date-time",
+                        "example": "2021-04-09T22:48:42.207303"
+                    }
+                },
+                "required": [
+                    "nodes",
+                    "query_time",
+                    "_cache_indexed",
+                    "_cache_expires"
+                ],
+                "$ref": ""
+            },
+            "RTFSResponse": {
+                "title": "RTFSResponse",
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "title": "Nodes",
+                        "type": "object",
+                        "example": {
+                            "Bot": "https://github.com/Rapptz/discord.py/blob/v1.7.1/discord/ext/commands/bot.py#L981-L1056",
+                            "BotBase": "https://github.com/Rapptz/discord.py/blob/v1.7.1/discord/ext/commands/bot.py#L96-L980",
+                            "Bot.run": "https://github.com/Rapptz/discord.py/blob/v1.7.1/discord/ext/commands/bot.py#L668-L727"
+                        }
+                    },
+                    "query_time": {
+                        "title": "Query Time",
+                        "type": "integer",
+                        "example": 0.0025
+                    }
+                },
+                "required": [
+                    "nodes",
+                    "query_time"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "Token": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Authorization",
+                "description": "tokens are required for certain endpoints, such as the private endpoints, cdn access (fetching images is available to everyone at https://cdn.idevision.net, uploading images and viewing statistic endpoints requires a token), the OCR API, and so on. You can apply for a token to the OCR API by using the `idevision apply` command on the `BOB (dev)#0346` bot on discord. You will be denied if your name contains any sort of zalgo or otherwise not url-safe characters. This is done at my discretion. For any other endpoints, please message IAmTomahawkx#1000 on discord."
+            }
+        }
+    }
+}

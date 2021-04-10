@@ -1,5 +1,7 @@
 Idevision API Version 3.3
 
+Beta documentation available at [/newdocs](https://idevision.net/newdocs)
+
 #####3.3
 - Added /api/public/xkcd
 - Added /api/public/xkcd/tags
