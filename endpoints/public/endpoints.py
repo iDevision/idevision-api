@@ -154,7 +154,7 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
     lex = mathparser.MathLexer()
     try:
         start = time.time()
-        tokens = lex.tokenize(data)
+        tokens = list(lex.tokenize(data))
         lex_time = time.time() - start
     except mathparser.UserInputError as f:
         return web.Response(text=str(f), status=417)
