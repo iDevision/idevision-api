@@ -1,4 +1,5 @@
 import pathlib
+import time
 import uuid
 import os
 
@@ -6,7 +7,7 @@ import asyncpg
 from aiohttp import web
 
 from utils.ratelimit import ratelimit
-from utils.rtfm import DocReader
+from utils import mathparser
 from utils import ocr, utils
 
 router = web.RouteTableDef()
@@ -141,3 +142,44 @@ async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     request.app.xkcd._cache.clear()
     return web.Response(status=204)
+
+@router.post("/api/public/math")
+@ratelimit(2, 6)
+async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
+    if not request.user:
+        return web.Response(reason="You must log in to use beta endpoints", status=401)
+
+    data = await request.text()
+
+    lex = mathparser.MathLexer()
+    try:
+        start = time.time()
+        tokens = lex.tokenize(data)
+        lex_time = time.time() - start
+    except mathparser.UserInputError as f:
+        return web.Response(text=str(f), status=417)
+
+    parser = mathparser.Parser(data, lex)
+    try:
+        start = time.time()
+        exprs = parser.parse(tokens)
+        parse_time = time.time()-start
+    except mathparser.UserInputError as f:
+        return web.Response(text=str(f), status=417)
+
+    resp = ""
+    start = time.time()
+
+    for i, expr in enumerate(exprs):
+        resp += f"[{i + 1}] {expr.execute(parser)}\n"
+
+    eval_time = time.time() - start
+
+    return web.json_response(
+        {
+            "output": resp,
+            "lex_time": lex_time,
+            "parse_time": parse_time,
+            "evaluation_time": eval_time
+        }
+    )
