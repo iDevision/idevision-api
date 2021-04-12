@@ -88,8 +88,10 @@ class Ratelimiter:
         if data['reason']:
             return web.Response(status=403, reason=data['reason']), None, False
 
-        _d = await conn.fetchrow("SELECT * FROM auths WHERE auth_key = $1", request.headers.get("Authorization"))
-        if _d is None and request.headers.get("Authorization", None) != request.app.settings['slave_key']:
+        _auth = request.headers.get("Authorization", None)
+        _d = await conn.fetchrow("SELECT * FROM auths WHERE auth_key = $1", _auth)
+
+        if _d is None and _auth and _auth != request.app.settings['slave_key']:
             return web.Response(reason="Invalid Authorization", status=401), None, False
 
         request.user = _d
