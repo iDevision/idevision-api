@@ -186,7 +186,7 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     imgs = []
     if images:
-        node = list(filter(lambda x: x['name'] == "math", request.app.slaves))
+        node = list(filter(lambda x: x['name'] == "math", request.app.slaves.values()))
         if node:
             node = node[0]
             for img in images:
