@@ -190,7 +190,7 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
         if node:
             node = node[0]
             for img in images:
-                stat, resp = await upload_media_to_slaves(
+                stat, _resp = await upload_media_to_slaves(
                     request.app,
                     node,
                     img,
@@ -200,12 +200,12 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
                     "_internal"
                 )
                 if stat:
-                    imgs.append(resp)
+                    imgs.append(_resp)
 
     eval_time = time.time() - start
     return web.json_response({
         "text": resp,
-        "images": [],
+        "images": imgs,
         "lex_time": lex_time,
         "parse_time": parse_time,
         "evaluation_time": eval_time
