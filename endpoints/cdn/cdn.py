@@ -31,6 +31,48 @@ async def get_cdn_stats(request: utils.TypedRequest, conn: asyncpg.Connection):
         "last_upload": amount['last_upload'].format(child_site=request.app.settings['child_site'])
     })
 
+async def upload_media_to_slaves(
+        app,
+        target: dict,
+        stream,
+        content_type: str,
+        filename: str,
+        conn: asyncpg.Connection,
+        user: str,
+        new_filename: str = None,
+        allowed_access: list=None,
+        expiry: datetime.datetime=None
+    ):
+    url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("create")
+    if new_filename:
+        url = url.with_query(name=new_filename)
+
+    async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
+        # also i cant be asked to make a clientsession pool
+        async with session.post(url, data=stream,
+                                headers={
+                                    "Authorization": app.settings['slave_key'],
+                                    "Content-Type": content_type,
+                                    "File-Name": filename
+                                }) as resp:
+            if resp.status == 600:
+                return False, await resp.text()
+            elif 100 >= resp.status >= 300:
+                return False, await resp.text()
+            else:
+                data = await resp.text()
+                data = json.loads(data)
+                new_name = data['name']
+                path = data['path']
+                node = data['node']
+                size = data['size']
+
+    await conn.execute(
+        "INSERT INTO uploads VALUES ($1,$2,$3,0,$4,$5,$6,false,$7,$8)",
+        new_name, user, datetime.datetime.utcnow(), allowed_access, path, node, size, expiry
+    )
+    return True, f"https://{app.settings['child_site']}/{target['name']}/{new_name}"
+
 @router.post("/api/cdn")
 @ratelimit(3, 7)
 async def post_media(request: utils.TypedRequest, conn: asyncpg.Connection):
@@ -130,7 +172,7 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
     node = request.match_info.get("node")
 
     query = """
-    SELECT key, time, username, views, size, slaves.name
+    SELECT key, time, username, views, size, slaves.name, expiry
     FROM uploads
     INNER JOIN slaves
         ON slaves.node = uploads.node
@@ -148,7 +190,8 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
         "author": about['username'],
         "views": about['views'],
         "node": about['name'],
-        "size": about['size']
+        "size": about['size'],
+        "expiry": about['expiry'] and about['expiry'].isoformat()
     })
 
 

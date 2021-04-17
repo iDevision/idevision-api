@@ -7,3 +7,4 @@ markdown2
 uvloop
 setproctitle
 sly
+git+https://github.com/iamtomahawkx/math-parser.git

@@ -27,6 +27,7 @@ create table uploads
     node integer not null references slaves (node),
     deleted boolean not null default false,
     size bigint,
+    expiry timestamp without time zone,
     PRIMARY KEY(key, node)
 );
 create table applications (

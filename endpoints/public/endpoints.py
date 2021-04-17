@@ -4,11 +4,12 @@ import uuid
 import os
 
 import asyncpg
+import mathparser
 from aiohttp import web
 
 from utils.ratelimit import ratelimit
-from utils import mathparser
 from utils import ocr, utils
+from ..cdn.cdn import upload_media_to_slaves
 
 router = web.RouteTableDef()
 
@@ -156,35 +157,56 @@ async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
         start = time.time()
         tokens = list(lex.tokenize(data))
         lex_time = time.time() - start
-    except mathparser.UserInputError as f:
-        return web.Response(text=str(f), status=417)
-
-    parser = mathparser.Parser(data, lex)
-    try:
+        parser = mathparser.Parser(data, lex)
         start = time.time()
         exprs = parser.parse(tokens)
         parse_time = time.time()-start
-    except mathparser.UserInputError as f:
-        return web.Response(text=str(f), status=417)
 
-    resp = ""
-    start = time.time()
+        resp = ""
+        images = []
 
-    for i, expr in enumerate(exprs):
-        try:
-            resp += f"[{i + 1}] {expr.execute(parser)}\n"
-        except ZeroDivisionError:
-            resp += f"[{i + 1}] Division by 0 error\n"
-        except mathparser.UserInputError as e:
-            resp += f"[{i + 1}] ...\n{str(e)}\n"
+        for i, expr in enumerate(exprs):
+            try:
+                e = expr.execute(None, parser)
+            except ZeroDivisionError:  # this one is intentionally left unhandled
+                resp += f"[{i + 1}] Zero divison error"
+                continue
+
+            if isinstance(e, dict):
+                f = await mathparser.graph.plot(e, i + 1)
+                if f:
+                    images.append(f)
+
+                resp += f"[{i + 1}] See graph {i + 1} ({e})\n"
+            else:
+                resp += f"[{i + 1}] {e}\n"
+
+    except mathparser.UserInputError as e:
+        return web.Response(text=str(e), status=417)
+
+    imgs = []
+    if images:
+        node = list(filter(lambda x: x['name'] == "math", request.app.slaves))
+        if node:
+            node = node[0]
+            for img in images:
+                stat, resp = await upload_media_to_slaves(
+                    request.app,
+                    node,
+                    img,
+                    "image/png",
+                    "upload.png",
+                    conn,
+                    "_internal"
+                )
+                if stat:
+                    imgs.append(resp)
 
     eval_time = time.time() - start
-
-    return web.json_response(
-        {
-            "output": resp,
-            "lex_time": lex_time,
-            "parse_time": parse_time,
-            "evaluation_time": eval_time
-        }
-    )
+    return web.json_response({
+        "text": resp,
+        "images": [],
+        "lex_time": lex_time,
+        "parse_time": parse_time,
+        "evaluation_time": eval_time
+    })

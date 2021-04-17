@@ -49,6 +49,9 @@ class App(web.Application):
                 self.stop()
                 raise RuntimeError("Failed to connect to the database") from e
 
+            await self.db.execute(
+                "INSERT INTO auths VALUES ('_internal', null, '{}', true, null, true, true) ON CONFLICT DO NOTHING"
+            )
             self._task = self._loop.create_task(self.offline_task())
 
         p = pathlib.Path("backup/defaults.json")
