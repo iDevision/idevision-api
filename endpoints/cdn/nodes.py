@@ -89,6 +89,11 @@ async def get_nodes(request: utils.TypedRequest, conn: asyncpg.Connection):
 
     slaves = request.app.slaves
     if safe:
-        slaves = {i: {x:y for x, y in n.items() if x != "ip"} for i, n in slaves.items()}
+        slaves = {i: {x: y for x, y in n.items() if x != "ip"} for i, n in slaves.items()}
+    else:
+        slaves = {i: n.copy() for i, n in slaves.items()}
+
+    for x in slaves.values():
+        x['signin'] = time.time() - x['signin']
 
     return web.json_response(slaves)
