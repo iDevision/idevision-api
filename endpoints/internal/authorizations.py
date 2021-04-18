@@ -331,12 +331,17 @@ async def get_logs(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.Response(reason="page must be a number", status=400)
 
     oldest_first = request.query.get("oldest-first", "").lower() == "true"
+    safe = request.query.get("safe", "").lower() == "true"
 
     data = await conn.fetch(f"SELECT * FROM logs ORDER BY accessed {'ASC' if oldest_first else 'DESC'} OFFSET $1 LIMIT 50;", page*50)
     def hook(row):
         d = dict(row)
+        if safe:
+            del d['remote']
+
         for a, b in d.items():
             if isinstance(b, datetime.datetime):
                 d[a] = b.isoformat()
         return d
+
     return web.json_response({"rows": [hook(x) for x in data]})
