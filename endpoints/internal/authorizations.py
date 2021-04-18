@@ -333,7 +333,9 @@ async def get_logs(request: utils.TypedRequest, conn: asyncpg.Connection):
     oldest_first = request.query.get("oldest-first", "").lower() == "true"
     safe = request.query.get("safe", "").lower() == "true"
 
-    data = await conn.fetch(f"SELECT * FROM logs ORDER BY accessed {'ASC' if oldest_first else 'DESC'} OFFSET $1 LIMIT 50;", page*50)
+    data = await conn.fetch(f"SELECT endpoint, remote, authorized_user, response_code, accessed, user_agent "
+                            f"FROM logs ORDER BY accessed {'ASC' if oldest_first else 'DESC'} OFFSET $1 LIMIT 50;",
+                            page*50)
     def hook(row):
         d = dict(row)
         if safe:
