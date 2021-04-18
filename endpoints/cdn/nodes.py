@@ -78,3 +78,17 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
 
         request.app.slaves[data['node']] = {"ip": ip, "port": port, "name": data['name'], "id": data['node'], "signin": time.time()}
         return web.json_response({"node": data['node'], "port": port, "name": data['name'], "ip": ip})
+
+@router.get("/api/cdn/nodes")
+@ratelimit(1,1)
+async def get_nodes(request: utils.TypedRequest, conn: asyncpg.Connection):
+    if not request.user or not request.user['administrator']:
+        return web.Response(status=401)
+
+    safe = request.query.get("safe", "").lower() == "true"
+
+    slaves = request.app.slaves
+    if safe:
+        slaves = {i: {x:y for x, y in n.items() if x != "ip"} for i, n in slaves.items()}
+
+    return web.json_response(slaves)
