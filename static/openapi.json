@@ -337,6 +337,287 @@
                     }
                 }
             }
+        },
+        "/api/public/ocr": {
+            "get": {
+                "summary": "OCR",
+                "description": "Optical Character Recognition. Requires a token with the `public.ocr` scope. Note that you should pass images with dark text and light backgrounds for best results. This endpoint has a ratelimit of 2 requests per 10 seconds. When passing a valid token, the ratelimit will be doubled to 4/10. Exceeding the ratelimit by double will result in an automatic ban from the api.",
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "name": "filetype",
+                        "schema": {
+                            "title": "FileType",
+                            "type": "string",
+                            "example": "jpg",
+                            "description": "The file extension of the file you are passing"
+                        },
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Image text",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OCRResponse"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Check the response status text (reason) to see what was wrong."
+                    },
+                    "403": {
+                        "description": "You have been banned from the site. Contact me on discord if you wish to appeal.",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests. Try again after the cooldown",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/xkcd": {
+            "get": {
+                "summary": "XKCD",
+                "description": "Search XKCD webcomics by name/tags. This endpoint has a ratelimit of 10 requests per 10 seconds. When passing a valid token, the ratelimit will be doubled to 20/10. Exceeding the ratelimit by double will result in an automatic ban from the api.",
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Close comics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/XKCDResponse"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Check the response status text (reason) to see what was wrong."
+                    },
+                    "403": {
+                        "description": "You have been banned from the site. Contact me on discord if you wish to appeal.",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests. Try again after the cooldown",
+                        "headers": {
+                            "ratelimit-remaining": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can still make in the current period",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "ratelimit-max": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How many requests you can make in a period",
+                                    "type": "integer",
+                                    "default": 3
+                                }
+                            },
+                            "ratelimit-reset": {
+                                "required": true,
+                                "schema": {
+                                    "description": "When the current period resets",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            },
+                            "ratelimit-retry-after": {
+                                "required": true,
+                                "schema": {
+                                    "description": "How long to wait before trying again",
+                                    "type": "integer",
+                                    "default": 5
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -406,6 +687,111 @@
                     "nodes",
                     "query_time"
                 ]
+            },
+            "OCRResponse": {
+                "title": "OCRResponse",
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "title": "Data",
+                        "type": "string",
+                        "example": "This is some text"
+                    }
+                }
+            },
+            "XKCDResponse": {
+                "title": "XKCDResponse",
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "title": "Nodes",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "title": "XKCD Object",
+                            "properties": {
+                                "num": {
+                                    "type": "integer",
+                                    "title": "Num",
+                                    "example": 123
+                                },
+                                "safe_title": {
+                                    "type": "string",
+                                    "title": "The safe title of the comic",
+                                    "example": "A Title"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "title": "The title of the comic",
+                                    "example": "A Title"
+                                },
+                                "posted": {
+                                    "type": "date-time",
+                                    "title": "Posted At",
+                                    "example": "2007-06-06T00:00:00",
+                                    "$ref": ""
+                                },
+                                "alt": {
+                                    "type": "string",
+                                    "title": "Alt text",
+                                    "example": "Something Witty"
+                                },
+                                "transcript": {
+                                    "type": "string",
+                                    "title": "Transcript",
+                                    "example": "Sometimes has a transcript of the comic"
+                                },
+                                "news": {
+                                    "type": "string",
+                                    "title": "News",
+                                    "example": "Sometimes has site news"
+                                },
+                                "image_url": {
+                                    "type": "string",
+                                    "title": "Comic Image URL",
+                                    "example": "https://imgs.xkcd.com/comics/..."
+                                },
+                                "url": {
+                                    "type": "string",
+                                    "title": "Comic URL",
+                                    "example": "https://xkcd.com/123"
+                                }
+                            }
+                        },
+                        "example": {
+                            "num": 123,
+                            "posted": "2007-06-06T00:00:00",
+                            "safe_title": "A Title",
+                            "title": "A Title",
+                            "alt": "Witty Comment",
+                            "transcript": "Sometimes has a transcript of the comic",
+                            "news": "Sometimes has site news",
+                            "image_url": "https://imgs.xkcd.com/comics/...",
+                            "url": "https://xkcd.com/123"
+                        }
+                    },
+                    "query_time": {
+                        "type": "integer",
+                        "title": "Query Time",
+                        "example": 0.011
+                    }
+                },
+                "example": {
+                    "nodes": [
+                        {
+                          "num": 123,
+                          "posted": "2007-06-06T00:00:00",
+                          "safe_title": "A Title",
+                          "title": "A Title",
+                          "alt": "Witty Comment",
+                          "transcript": "Sometimes has a transcript of the comic",
+                          "news": "Sometimes has site news",
+                          "image_url": "https://imgs.xkcd.com/comics/...",
+                          "url": "https://xkcd.com/123"
+                        }
+                    ],
+                    "query_time": 0.011
+                }
             }
         },
         "securitySchemes": {
