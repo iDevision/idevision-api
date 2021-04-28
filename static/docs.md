@@ -39,6 +39,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 - twitchio
 - wavelink
 - discord.py
+- discord.py-2
 - aiohttp
 
 ### Required Query parameters

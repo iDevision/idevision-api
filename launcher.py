@@ -36,7 +36,16 @@ logger.warning("Ensuring Source modules are up to date")
 try:
     subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)
 except FileNotFoundError:
-    logger.critical("Failed to update Source modules, bash not found.")
+    logger.critical("Failed to update Source modules")
+
+try:
+    subprocess.run(["/bin/bash", "-c", "cd discordpy_2 && git reset --hard && git pull origin master"])
+    subprocess.run(["/bin/bash", "-c",
+                    "find discordpy_2/discord -type f -name '*.py' | xargs sed -i s/import\ discord\\n/import\ discordpy_2.discord\ as\ discord/"])
+    subprocess.run(["/bin/bash", "-c",
+                    "find discordpy_2/discord -type f -name '*.py' | xargs sed -i s/from\ discord/from\ discordpy_2.discord/"])
+except:
+    logger.critical("Failed to update dpy 2")
 
 try:
     import uvloop

@@ -11,6 +11,7 @@ from types import ModuleType, FunctionType
 from typing import List
 
 import discord, twitchio, wavelink, aiohttp
+import discordpy_2.discord as discord_2
 from aiohttp import web
 
 logger = logging.getLogger("site.rtfs")
@@ -117,6 +118,9 @@ class Index:
                 continue
 
             for file in files:
+                if root.endswith("discord/types"):
+                    continue
+
                 if file.endswith(".py") and not file.startswith("__"):
                     try:
                         mod = _import_mod(root, file)
@@ -153,7 +157,10 @@ class Index:
         out = {}
         for node in nodes:
             if not text:
-                resp = f"{self.url}{node.module.__name__.replace('.', '/')}.py#L{node.source[1]}-L{node.source[1] + len(node.source[0])}"
+                if self.lib is discord_2:
+                    resp = f"{self.url}{node.module.__name__.replace('.', '/').replace('discordpy_2/', '')}.py#L{node.source[1]}-L{node.source[1] + len(node.source[0])}"
+                else:
+                    resp = f"{self.url}{node.module.__name__.replace('.', '/')}.py#L{node.source[1]}-L{node.source[1] + len(node.source[0])}"
             else:
                 resp = "".join(node.source[0]).strip()
             name = []
@@ -173,10 +180,13 @@ class Index:
             "query_time": str(end-start)
         })
 
+with open("discordpy_2/.git/refs/heads/master") as f:
+    dpy2_heads = f.read().strip("\n")
 
 class Indexes:
     __indexable = {
         "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/", discord),
+        "discord.py-2": Index(f"https://github.com/Rapptz/discord.py/blob/{dpy2_heads}/", discord_2),
         "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/", twitchio),
         "wavelink": Index(f"https://github.com/PythonistaGuild/Wavelink/v{wavelink.__version__.strip('a')}/", wavelink),
         "aiohttp": Index(f"https://github.com/aio-libs/aiohttp/blob/v{aiohttp.__version__.strip('a')}/", aiohttp)
