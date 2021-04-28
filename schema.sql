@@ -13,8 +13,18 @@ create table auths
     permissions     text[],
     active         boolean default true not null,
     discord_id     bigint,
-    ignores_ratelimits boolean not null default false,
-    administrator boolean not null default false
+    ignores_ratelimits boolean not null default false
+);
+create table permissions
+(
+    name text primary key
+);
+create table routes
+(
+    route text not null,
+    method text not null,
+    PRIMARY KEY (route, method),
+    permission text references permissions(name)
 );
 create table uploads
 (

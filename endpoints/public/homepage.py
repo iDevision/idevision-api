@@ -1,7 +1,7 @@
 import aiohttp_jinja2
 from aiohttp import web
 
-from utils import ratelimit, utils
+from utils import handler, app
 
 router = web.RouteTableDef()
 
@@ -9,12 +9,9 @@ def setup(app):
     app.add_routes(router)
 
 @router.post("/api/homepage")
-@ratelimit(5, 30)
-async def home_urls(request: utils.TypedRequest, conn):
-    auth, perms, admin = await utils.get_authorization(request, request.headers.get("Authorization"))
-    if not auth:
-        return web.Response(text="401 Unauthorized", status=401)
-
+@handler.ratelimit(5, 30)
+async def home_urls(request: app.TypedRequest, conn):
+    auth, admin = request.user['username'], "administrator" in request.user['permissions']
     data = await request.json()
     user = data.get("user", auth) if admin else auth
     displayname = data['display_name']
@@ -37,7 +34,7 @@ async def home_urls(request: utils.TypedRequest, conn):
 
 @router.get("/homepage")
 @aiohttp_jinja2.template("static/homepage.html")
-async def home(request: utils.TypedRequest):
+async def home(request: app.TypedRequest):
     usr = request.query.get("user", "Unknown")
     row = await request.app.db.fetchrow("SELECT * FROM homepages WHERE username = $1", usr)
     if not row:

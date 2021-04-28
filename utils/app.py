@@ -2,7 +2,7 @@ import sys
 import asyncio
 import json
 import pathlib
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, Dict
 
 import asyncpg
 from aiohttp import web
@@ -12,10 +12,6 @@ from utils.rtfm import DocReader
 from utils.xkcd import XKCD
 
 test = "--unittest" in sys.argv
-
-def route_allowed(permissions, perm):
-    perm = perm.strip("/")
-    return perm in permissions
 
 class App(web.Application):
     def __init__(self, *args, **kwargs):
@@ -34,25 +30,30 @@ class App(web.Application):
             self.settings = json.load(f)
 
         self.slaves = {}
+        self.route_permissions: Dict[Tuple[str, str], str] = {}
 
     @property # get rid of the deprecation warning
     def loop(self) -> asyncio.AbstractEventLoop:
         return self._loop
 
     async def async_init(self, _):
-        if test:
-            pass
-        else:
-            try:
-                self.db: asyncpg.Pool = await asyncpg.create_pool(self.settings['db'])
-            except Exception as e:
-                self.stop()
-                raise RuntimeError("Failed to connect to the database") from e
+        try:
+            self.db: asyncpg.Pool = await asyncpg.create_pool(self.settings['db'], max_inactive_connection_lifetime=5)
+        except Exception as e:
+            self.stop()
+            raise RuntimeError("Failed to connect to the database") from e
 
-            await self.db.execute(
-                "INSERT INTO auths VALUES ('_internal', null, '{}', true, null, true, true) ON CONFLICT DO NOTHING"
+        async with self.db.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO auths VALUES ('_internal', null, '{administrator}', true, null, true) ON CONFLICT DO NOTHING"
             )
-            self._task = self._loop.create_task(self.offline_task())
+            data = await conn.fetch(
+                "SELECT route, method, permission from routes"
+            )
+            for record in data:
+                self.route_permissions[(record['route'], record['method'])] = record['permission']
+
+        self._task = self._loop.create_task(self.offline_task())
 
         p = pathlib.Path("backup/defaults.json")
         if p.exists():
@@ -85,10 +86,10 @@ class App(web.Application):
             }, f)
 
         async def _stop():
-            await asyncio.sleep(3) # finish up pending requests
             try:
                 self._task.cancel()
             except: pass
+            await asyncio.sleep(3) # finish up pending requests
             self._loop.stop()
 
         self._loop.create_task(_stop())
