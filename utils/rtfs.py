@@ -1,196 +1,192 @@
+import ast
 import asyncio
-import builtins
-import os
-import inspect
-import logging
-import importlib
-import time
 import difflib
-from types import ModuleType, FunctionType
+import configparser
+import os
+import time
+import logging
+import re
+from os import PathLike
+from typing import Union, List, Dict
 
-from typing import List
-
-import discord, twitchio, wavelink, aiohttp
-import discordpy_2.discord as discord_2
 from aiohttp import web
 
 logger = logging.getLogger("site.rtfs")
 logger.setLevel(10)
 
-_builtins = [getattr(builtins, x) for x in dir(builtins)]
-
 class Node:
-    source = None
-    file = None
-    item = None
-    parent = None
-    module = None
-    children = None
+    file: str
+    line: int
+    end_line: int
+    name: str
+    url: str
+    source: str
 
     def __init__(self, **kwargs):
         for a, b in kwargs.items():
             setattr(self, a, b)
 
-        self.children = []
+    def __repr__(self):
+        return f"<Node file={self.file} line={self.line} end_line={self.end_line} name={self.name} url={self.url}>"
 
-    def __str__(self):
-        return f"<Node {self.item} with parent {self.parent} in module {self.module.__name__} file={self.file}>"
-
-    __repr__ = __str__
-
+def _get_attr_name(attr: ast.Attribute):
+    if type(attr.value) is ast.Attribute:
+        return _get_attr_name(attr.value)
 
 class Index:
-    def __init__(self, url, lib):
-        self.lib = lib
-        self.map = {}
-        self.url = url
-        self.map_keys = None
+    def __init__(self, repo_path: str, index_folder: str, repo_url: str, branch: str=None, version=None):
+        self.repo_path = repo_path
+        if index_folder in ("", ".", "./"):
+            self.index_folder = ""
+        else:
+            self.index_folder = index_folder
 
-    async def index_module_layer(self, nodes: list, module):
-        dirs = dir(module)
-        for t in dirs:
-            await asyncio.sleep(0)
-            if t.startswith("__"):
-                continue
+        self.repo_url = repo_url.strip("/")
+        self.version = version
 
-            gets = getattr(module, t)
+        if not branch:
+            if not os.path.exists(os.path.join(repo_path, ".git")):
+                raise ValueError("not a git repo, no branch")
 
-            if type(gets) != ModuleType and type(gets) not in (dict, list, int, str, bool):
-                if type(gets) in _builtins and type(gets) is not type:
-                    continue
-
-                if type(gets) in (type(discord.opus.c_int16_ptr), type(discord.opus.EncoderStruct), type(None)):
-                    continue
-
-                if not isinstance(gets, type) and type(gets) != FunctionType:
-                    gets = gets.__class__
-
-                if gets.__module__ != module.__name__:
-                    continue
-
-                try:
-                    nodes.append(Node(source=inspect.getsourcelines(gets), file=module.__file__, item=gets, module=module))
-                except OSError:
-                    pass
-
-    async def index_class_layer(self, node: Node):
-        children = dir(node.item)
-
-        for child in children:
-            await asyncio.sleep(0)
-            if child.startswith('__'):
-                continue
-
-            gets = getattr(node.item, child)
-            if isinstance(gets, property):
-                gets = gets.fget
-
+            with open(os.path.join(repo_path, ".git", "HEAD"), encoding="utf8") as f:
+                v = f.read()
             try:
-                node.children.append \
-                    (Node(source=inspect.getsourcelines(gets), file=node.file, item=gets, module=node.module, parent=node))
-            except OSError:
-                # print("no source for ", gets)
-                pass
-            except TypeError:
-                pass
+                branch = v.split("ref: refs/heads/")[1].strip()
+            except:
+                with open(os.path.join(repo_path, ".git", "config"), encoding="utf8") as f:
+                    c = configparser.ConfigParser()
+                    c.read_file(f)
 
-    async def do_index(self, no, a, package=None):
-        package = package or self.lib
-        nodes = []
-        base = os.path.dirname(package.__file__)
+                branch = c.get('remote "origin"', "fetch").split("/")[-1]
 
-        logger.info(f"package:{package.__package__}: Indexing package ({no}/{a})")
+        self.branch = branch
+        self.nodes: Dict[str, Node] = {}
 
-        def _import_mod(r: str, f: str):
-            r = r.replace(base, "").strip("\\")
-            assert f.endswith(".py")
-            modname = (r.replace("\\", ".").replace("/", ".") + "." if r else "") + f.replace(".py", "")
-            modname = modname.strip().strip(".")
-            if modname:
-                modname = package.__package__.lower() + '.' + modname
-            else:
-                modname = package.__package__.lower()
+    async def index_class_function(self, nodes: dict, cls: ast.ClassDef, src: List[str], fn: Union[ast.FunctionDef, ast.AsyncFunctionDef]):
+        clsname = cls.name
 
-            return importlib.import_module(modname)
+        for b in fn.body:
+            await asyncio.sleep(0)
+            if type(b) is ast.Assign:
+                t0 = b.targets[0]
+                if type(t0) is ast.Attribute and _get_attr_name(t0) == fn.args.args[0].arg:
+                    name = clsname + "." + t0.attr
+                    if name not in nodes:
+                        n = Node(
+                            file=None,
+                            line=b.lineno,
+                            end_line=b.end_lineno,
+                            name=name,
+                            source="\n".join(src[b.lineno-1:b.end_lineno])
+                        )
+                        nodes[name] = n
 
-        for root, dirs, files in os.walk(base):
-            if root.endswith(("__pycache__", "bin")):
+    async def index_class(self, nodes: dict, src: List[str], cls: ast.ClassDef):
+        clsname = cls.name
+
+        for b in cls.body:
+            t = type(b)
+            if t is ast.Assign and not b.targets[0].id.startswith("__"):
+                name = clsname + "." + b.targets[0].id
+                if name not in nodes:
+                    n = Node(
+                        file=None,
+                        line=b.lineno,
+                        end_line=b.end_lineno,
+                        name=name,
+                        source="\n".join(src[b.lineno-1:b.end_lineno])
+                    )
+                    nodes[name] = n
+
+            elif t in (ast.FunctionDef, ast.AsyncFunctionDef):
+                if not b.name.startswith("__"):
+                    nodes[clsname + "." + b.name] = Node(
+                        file=None,
+                        line=b.lineno,
+                        end_line=b.end_lineno,
+                        name=clsname + "." + b.name,
+                        source="\n".join(src[b.lineno-1:b.end_lineno])
+                    )
+                await self.index_class_function(nodes, cls, src, b)
+
+    async def index_file(self, _nodes: dict, file: Union[str, PathLike], target_file: str):
+        nodes = {}
+        with open(file, encoding="utf8") as f:
+            src = f.read()
+
+        lines = src.split("\n")
+        node = ast.parse(src)
+
+        for b in node.body:
+            if type(b) is ast.ClassDef:
+                nodes[b.name] = Node(
+                    file=None,
+                    line=b.lineno,
+                    end_line=b.end_lineno,
+                    name=b.name,
+                    source="\n".join(lines[b.lineno-1:b.end_lineno])
+                )
+                await self.index_class(nodes, lines, b)
+
+            elif type(b) is ast.Assign and isinstance(b.targets[0], ast.Name):
+                name = b.targets[0].id
+                if name not in nodes:
+                    n = Node(
+                        file=None,
+                        line=b.lineno,
+                        end_line=b.end_lineno,
+                        name=name,
+                        source="\n".join(lines[b.lineno-1:b.end_lineno])
+                    )
+                    nodes[name] = n
+
+
+        for n in nodes.values():
+            n.file = target_file.replace("\\", "/")
+
+        _nodes.update(nodes)
+
+    async def index_directory(self, nodes: dict, pth: str, index_dir: str):
+        pth = os.path.join(pth, index_dir)
+        idx = os.listdir(pth)
+
+        for f in idx:
+            if f == "types":
                 continue
 
-            for file in files:
-                if root.endswith("discord/types"):
-                    continue
+            if os.path.isdir(os.path.join(pth, f)):
+                await self.index_directory(nodes, os.path.join(pth, f), "")
 
-                if file.endswith(".py") and not file.startswith("__"):
-                    try:
-                        mod = _import_mod(root, file)
-                    except ModuleNotFoundError as e:
-                        logger.warning(f"Failed {file}: {e.args[0]}")
-                    else:
-                        await self.index_module_layer(nodes, mod)
+            elif f.endswith(".py"):
+                await self.index_file(nodes, os.path.join(pth, f), os.path.join(index_dir, f))
 
-        for node in nodes:
-            await self.index_class_layer(node)
+    async def index_lib(self):
+        await self.index_directory(self.nodes, self.repo_path, self.index_folder)
 
-        self.nodes = nodes
-        logger.info(f"package:{package.__package__}: Created index. Mapping.")
-        self.create_map()
-        self.map_keys = list(self.map.keys())
-        logger.info(f"package:{package.__package__}: Created map. {len(self.map_keys)} nodes indexed")
-        return self
+        for name, n in self.nodes.items():
+            n.url = f"{self.repo_url}/blob/{self.branch}/{n.file}#L{n.line}-L{n.end_line}"
 
-    def create_map(self):
-        for node in self.nodes:
-            if node.children:
-                for n in node.children:
-                    self.map[node.item.__name__ + "." + n.item.__name__] = n
-
-            self.map[node.item.__name__] = node
+        self.keys = list(self.nodes.keys())
+        if not self.version and '__version__' in self.nodes:
+            v = re.search("__version__\s*=\s*'|\"((\d|\.)*)'|\"", self.nodes['__version__'].source)
+            if v:
+                self.version = v.group(1)
+            else:
+                print(self.nodes['__version__'], self.nodes['__version__'].source)
 
     def find_matches(self, word: str) -> List[Node]:
-        vals = difflib.get_close_matches(word, self.map_keys, cutoff=0.55)
-        return [self.map[v] for v in vals]
-
-    async def do_rtfs(self, item: str, text: bool):
-        start = time.perf_counter()
-        nodes = self.find_matches(item)
-        out = {}
-        for node in nodes:
-            if not text:
-                if self.lib is discord_2:
-                    resp = f"{self.url}{node.module.__name__.replace('.', '/').replace('discordpy_2/', '')}.py#L{node.source[1]}-L{node.source[1] + len(node.source[0])}"
-                else:
-                    resp = f"{self.url}{node.module.__name__.replace('.', '/')}.py#L{node.source[1]}-L{node.source[1] + len(node.source[0])}"
-            else:
-                resp = "".join(node.source[0]).strip()
-            name = []
-            _node = node.parent
-            while _node:
-                name.append(_node.item.__name__)
-                _node = _node.parent
-
-            name = ".".join(list(reversed(name)) + [node.item.__name__])
-
-            out[name] = resp
-
-        end = time.perf_counter()
-
-        return web.json_response({
-            "nodes": out,
-            "query_time": str(end-start)
-        })
-
-with open("discordpy_2/.git/refs/heads/master") as f:
-    dpy2_heads = f.read().strip("\n")
+        vals = difflib.get_close_matches(word, self.keys, cutoff=0.55)
+        return [self.nodes[v] for v in vals]
 
 class Indexes:
     __indexable = {
-        "discord.py": Index(f"https://github.com/Rapptz/discord.py/blob/v{discord.__version__.strip('a')}/", discord),
-        "discord.py-2": Index(f"https://github.com/Rapptz/discord.py/blob/{dpy2_heads}/", discord_2),
-        "twitchio": Index(f"https://github.com/TwitchIO/TwitchIO/blob/v{twitchio.__version__.strip('a')}/", twitchio),
-        "wavelink": Index(f"https://github.com/PythonistaGuild/Wavelink/v{wavelink.__version__.strip('a')}/", wavelink),
-        "aiohttp": Index(f"https://github.com/aio-libs/aiohttp/blob/v{aiohttp.__version__.strip('a')}/", aiohttp)
+        "discord.py-2": Index("repos/discord.py-2", "discord", "https://github.com/Rapptz/discord.py/"),
+        "discord.py": Index("repos/discord.py", "discord", "https://github.com/Rapptz/discord.py/"),
+        "twitchio": Index("repos/TwitchIO", "twitchio", "https://github.com/TwitchIO/TwitchIO/"),
+        "wavelink": Index("repos/Wavelink", "wavelink", "https://github.com/PythonistaGuild/Wavelink/"),
+        "aiohttp": Index("repos/aiohttp", "aiohttp", "https://github.com/aio-libs/aiohttp/")
     }
+
     def __init__(self):
         self.index = {}
         self._is_indexed = False
@@ -208,7 +204,7 @@ class Indexes:
     @property
     def lib_index(self):
         return {
-            x: y.lib.__version__ for x, y in self.__indexable.items()
+            x: y.version for x, y in self.__indexable.items()
         }
 
     def get_query(self, lib: str, query: str, as_text: bool = False):
@@ -218,13 +214,22 @@ class Indexes:
         if lib not in self.index:
             return None
 
-        return self.index[lib].do_rtfs(query, as_text)
+        start = time.monotonic()
+        resp = self.index[lib].find_matches(query)
+        end = time.monotonic() - start
+        return web.json_response({
+            "nodes": {x.name: (x.url if not as_text else x.source) for x in resp},
+            "query_time": end
+        })
 
     async def _do_index(self, *_):
         logger.info("Start Index")
         amount = len(self.__indexable)
         for n, (name, index) in enumerate(self.__indexable.items()):
-            self.index[name] = await index.do_index(n+1, amount)
+            logger.info(f"Indexing module {name} ({n+1}/{amount})")
+            self.index[name] = index
+            await index.index_lib()
+            logger.info(f"Finished indexing module {name} ({len(index.nodes)} nodes)")
 
         logger.info("Finish Index")
         self._is_indexed = True

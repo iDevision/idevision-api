@@ -32,20 +32,15 @@ handle = logging.StreamHandler(sys.stderr)
 handle.setFormatter(logging.Formatter("{levelname}[{name}] : {message}", style="{"))
 logger.addHandler(handle)
 
-logger.warning("Ensuring Source modules are up to date")
 try:
-    subprocess.run(["/bin/bash", "-c", "pip install -U -r sources.txt"], stderr=sys.stderr, stdout=sys.stdout)
-except FileNotFoundError:
-    logger.critical("Failed to update Source modules")
-
-try:
-    subprocess.run(["/bin/bash", "-c", "cd discordpy_2 && git reset --hard && git pull origin master"])
-    subprocess.run(["/bin/bash", "-c",
-                    "find discordpy_2/discord -type f -name '*.py' | xargs sed -i s/import\ discord\\n/import\ discordpy_2.discord\ as\ discord/"])
-    subprocess.run(["/bin/bash", "-c",
-                    "find discordpy_2/discord -type f -name '*.py' | xargs sed -i s/from\ discord/from\ discordpy_2.discord/"])
+    logger.warning("Pulling rtfs repos")
+    dirs = os.listdir("repos")
+    for d in dirs:
+        subprocess.run(["/bin/bash", "-c", f"cd repos/{d} && git pull"])
 except:
-    logger.critical("Failed to update dpy 2")
+    logger.warning("Failed to pull repos")
+else:
+    logger.warning("Pulled repos")
 
 try:
     import uvloop
@@ -54,7 +49,8 @@ except:
     logger.warning("Failed to use uvloop")
 
 import endpoints
-from utils import utils, ratelimit
+from utils import utils
+from utils.ratelimit import ratelimit
 
 setproctitle.setproctitle("Idevision site - Master")
 uptime = datetime.datetime.utcnow()

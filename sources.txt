@@ -1,7 +1,0 @@
-discord.py
-twitchio
-wavelink
-aiohttp
-
-gunicorn
-pytest

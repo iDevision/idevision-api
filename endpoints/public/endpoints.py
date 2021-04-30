@@ -34,7 +34,7 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
         return web.Response(status=400, reason="Missing library parameter")
 
     try:
-        v = await request.app.rtfs.get_query(lib, query, fmt=="source")
+        v = request.app.rtfs.get_query(lib, query, fmt=="source")
         if v is None:
             return web.Response(status=400, reason="library not found. If you think it should be added, contact IAmTomahawkx#1000 on discord.")
         else:
