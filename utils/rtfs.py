@@ -32,7 +32,6 @@ class Node:
 def _get_attr_name(attr: ast.Attribute):
     if type(attr.value) is ast.Attribute:
         return _get_attr_name(attr.value)
-
 class Index:
     def __init__(self, repo_path: str, index_folder: str, repo_url: str, branch: str=None, version=None):
         self.repo_path = repo_path
@@ -109,9 +108,9 @@ class Index:
                     )
                 await self.index_class_function(nodes, cls, src, b)
 
-    async def index_file(self, _nodes: dict, file: Union[str, PathLike], target_file: str):
+    async def index_file(self, _nodes: dict, fp: Union[str, PathLike], dirs: List[str]):
         nodes = {}
-        with open(file, encoding="utf8") as f:
+        with open(fp, encoding="utf8") as f:
             src = f.read()
 
         lines = src.split("\n")
@@ -140,28 +139,30 @@ class Index:
                     )
                     nodes[name] = n
 
-
+        pth = "/".join(dirs)
         for n in nodes.values():
-            n.file = target_file.replace("\\", "/")
+            n.file = pth
 
         _nodes.update(nodes)
 
-    async def index_directory(self, nodes: dict, pth: str, index_dir: str):
-        pth = os.path.join(pth, index_dir)
-        idx = os.listdir(pth)
+    async def index_directory(self, nodes: dict, idx_pth: str, parents: List[str], index_dir: str):
+        parents = (parents and parents.copy()) or []
+        target = os.path.join(idx_pth, *parents, index_dir)
+        parents.append(index_dir)
+        idx = os.listdir(target)
 
         for f in idx:
             if f == "types":
                 continue
 
-            if os.path.isdir(os.path.join(pth, f)):
-                await self.index_directory(nodes, os.path.join(pth, f), "")
+            if os.path.isdir(os.path.join(target, f)):
+                await self.index_directory(nodes, idx_pth, parents, f)
 
             elif f.endswith(".py"):
-                await self.index_file(nodes, os.path.join(pth, f), os.path.join(index_dir, f))
+                await self.index_file(nodes, os.path.join(target, f), parents+[f])
 
     async def index_lib(self):
-        await self.index_directory(self.nodes, self.repo_path, self.index_folder)
+        await self.index_directory(self.nodes, self.repo_path, [], self.index_folder)
 
         for name, n in self.nodes.items():
             n.url = f"{self.repo_url}/blob/{self.branch}/{n.file}#L{n.line}-L{n.end_line}"
