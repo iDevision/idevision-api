@@ -177,7 +177,7 @@ async def get_upload_stats(request: utils.TypedRequest, conn: asyncpg.Connection
     INNER JOIN slaves
         ON slaves.node = uploads.node
     WHERE key = $1
-    AND node = (SELECT node FROM slaves WHERE name = $2)
+    AND uploads.node = (SELECT slaves.node FROM slaves WHERE slaves.name = $2)
     AND deleted IS false
     """
     about = await conn.fetchrow(query, key, node)
