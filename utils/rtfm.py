@@ -384,7 +384,7 @@ class CargoReader:
                 crate_size += 1
                 i += 1
 
-        self.cache[_crate] = ret = list(sorted(tuple((await self.build_href_and_path(x, baseurl)) for x in searchindex), key=lambda m: m[0]))
+        self.cache[_crate] = ret = list(sorted([await self.build_href_and_path(x, baseurl) for x in searchindex]), key=lambda m: m[0]))
         return ret
 
     async def build_href_and_path(self, item: dict, root_path: str) -> Tuple[str, str]:
