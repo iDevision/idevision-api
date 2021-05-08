@@ -359,7 +359,9 @@ Response 204
   - public.ocr
 - POST /api/homepage
   - (any authorization)
-- GET /api/public/rtfm
+- GET /api/public/rtfm.sphinx
+  - (public)
+- GET /api/public/rtfm.rustdoc
   - (public)
 - GET /api/public/rtfs
   - (public)
