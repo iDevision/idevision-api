@@ -2,6 +2,7 @@ import pathlib
 import time
 import uuid
 import os
+import re
 
 import asyncpg
 import mathparser
@@ -11,6 +12,7 @@ from utils.ratelimit import ratelimit
 from utils import ocr, utils
 from ..cdn.cdn import upload_media_to_slaves
 
+DOCRS_RE = re.compile(r"https://docs\.rs/([^/]*)")
 router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
@@ -43,6 +45,7 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
         return web.Response(status=500, reason="Source index is not complete, try again later")
 
 @router.get("/api/public/rtfm")
+@router.get("/api/public/rtfm.sphinx")
 @ratelimit(3, 5)
 async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
     show_labels = request.query.get("show-labels", "true").lower() == "true"
@@ -56,6 +59,27 @@ async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
     if query is None:
         return web.Response(status=400, reason="Mising query parameter")
     return await request.app.rtfm.do_rtfm(request, location.strip("/"), query, show_labels, label_labels)
+
+@router.get("/api/public/rtfm.rustdoc")
+@ratelimit(3, 5)
+async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
+    location = request.query.get("location", None)
+    if location is None:
+        return web.Response(status=400, reason="Missing location parameter (The URL of the documentation, or 'std')")
+
+    if location == "std":
+        location = "https://doc.rust-lang.org/std"
+    crate = DOCRS_RE.search(location)
+    if not crate:
+        return web.Response(status=400, reason="Invalid location (must be a docs.rs crate)")
+
+    crate = crate.groups()[0]
+
+    query = request.query.get("query", None)
+    if query is None:
+        return web.Response(status=400, reason="Mising query parameter")
+
+    return await request.app.cargo_rtfm.do_rtfm(request, crate, query)
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)

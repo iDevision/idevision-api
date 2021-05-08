@@ -8,7 +8,7 @@ import asyncpg
 from aiohttp import web
 
 from utils.rtfs import Indexes
-from utils.rtfm import DocReader
+from utils.rtfm import DocReader, CargoReader
 from utils.xkcd import XKCD
 
 test = "--unittest" in sys.argv
@@ -49,9 +49,12 @@ class App(web.Application):
                 self.stop()
                 raise RuntimeError("Failed to connect to the database") from e
 
-            await self.db.execute(
-                "INSERT INTO auths VALUES ('_internal', null, '{}', true, null, true, true) ON CONFLICT DO NOTHING"
-            )
+            try:
+                await self.db.execute(
+                    "INSERT INTO auths VALUES ('_internal', null, '{}', true, null, true, true) ON CONFLICT DO NOTHING"
+                )
+            except:
+                pass
             self._task = self._loop.create_task(self.offline_task())
 
         p = pathlib.Path("backup/defaults.json")
@@ -69,6 +72,7 @@ class App(web.Application):
         self.rtfs = Indexes()
         self.rtfm = DocReader(self)
         self.xkcd = XKCD(self)
+        self.cargo_rtfm = CargoReader(self)
 
     async def offline_task(self):
         while True:

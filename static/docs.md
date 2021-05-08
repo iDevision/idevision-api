@@ -1,6 +1,10 @@
-Idevision API Version 3.3
+Idevision API Version 3.4
 
 Beta documentation available at [/newdocs](https://idevision.net/newdocs)
+
+#####3.4
+- /api/public/rtfm is now deprecated in favour of /api/public/rtfm.sphinx
+- added /api/public/rtfm.rustdoc
 
 #####3.3
 - Added /api/public/xkcd
@@ -72,8 +76,8 @@ Response 200 (when no query parameters passed)
 ```
 ___
 
-## GET /api/public/rtfm
-This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided. (rustdoc support may be coming soon)
+## GET /api/public/rtfm.sphinx
+This endpoint indexes sphinx repositories and returns documentation locations for items closest to the query provided.
 
 ### Ratelimit
 3 requests per 5 seconds (3/5s).
@@ -96,6 +100,29 @@ Response 200
     "query_time": "1.0",
     "_cache_indexed": "2021-04-07T05:54:47.939360",
     "_cache_expires": "2021-04-07T05:54:47.939360"
+}
+```
+___
+
+## GET /api/public/rtfm.rustdoc
+This endpoint indexes rust crates and returns documentation locations for items closest to the query provided.
+pass `std` as the crate query parameter to index the std instead of an external crate
+
+### Ratelimit
+3 requests per 5 seconds (3/5s).
+Exceeding this api by double (6/5s) will result in an automatic api ban (and disabling of your account, if you are using an API token). If you are using an API token, the rates above are doubled.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Required Query parameters
+- query : The actual query
+- crate : The crate to search. This will use the [docs.rs](https://docs.rs) documentation of the crate provided. You may pass `std` to use the latest stable build.
+
+### Returns
+Response 200
+```json
+{
+    "nodes": {"Node name": "URL of the documentation"},
+    "query_time": "1.0"
 }
 ```
 ___
