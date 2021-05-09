@@ -62,7 +62,7 @@ async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
 
 @router.get("/api/public/rtfm.rustdoc")
 @ratelimit(3, 5)
-async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
+async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
     location = request.query.get("location", None)
     if location is None:
         return web.Response(status=400, reason="Missing location parameter (The URL of the documentation, or 'std')")
