@@ -10,7 +10,7 @@ async def main():
     betaconn = await asyncpg.connect(cfg['db']+"_beta")
     async with conn.transaction() as trans:
         beta_routes = await betaconn.fetch("SELECT * FROM routes;")
-        await conn.executemany("INSERT INTO routes VALUES ($1, $2, $3)", [[x['route'], x['method'], x['permission']] for x in beta_routes])
+        await conn.executemany("INSERT INTO routes VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [[x['route'], x['method'], x['permission']] for x in beta_routes])
 
         users = await conn.fetch("select * from auths;")
         _updates = []
