@@ -20,7 +20,8 @@ async def main():
             if user['administrator']:
                 new_perms.append("administrator")
 
-            if perms.pop("cdn"):
+            if "cdn" in perms:
+                perms.remove("cdn")
                 new_perms.append("cdn.upload")
 
             new_perms += perms
