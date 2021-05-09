@@ -1,70 +1,33 @@
 import asyncio
 import asyncpg
 import os
+import json
 
 async def main():
-    conn = await asyncpg.connect("postgres://") # type: asyncpg.Connection
+    with open("config.json") as f:
+        cfg = json.load(f)
+    conn = await asyncpg.connect(cfg['db']) # type: asyncpg.Connection
+    betaconn = await asyncpg.connect(cfg['db']+"_beta")
     async with conn.transaction() as trans:
-        await conn.execute("alter table auths add column administrator bool not null default false")
-        await conn.execute("""
-        create table slaves (
-    node serial primary key,
-    name text unique not null,
-    ip text not null,
-    port integer not null,
-    UNIQUE (ip, port)
-);
-        """)
-        await conn.execute("INSERT INTO slaves VALUES (1, 'migrated', '127.0.0.1', '8350');")
-        # move /var/www/idevision/media to slave-location/data
-        os.rename("/var/www/idevision/media", "/var/www/idevision/migration-slave/data")
+        beta_routes = await betaconn.fetch("SELECT * FROM routes;")
+        await conn.executemany("INSERT INTO routes VALUES ($1, $2, $3)", [[x['route'], x['method'], x['permission']] for x in beta_routes])
 
-        all_uploads = await conn.fetch("SELECT * FROM uploads")
-        await conn.execute("DROP TABLE uploads")
-        await conn.execute("""
-        create table uploads
-(
-    key      text not null,
-    username text references auths (username) ON DELETE CASCADE,
-    time     timestamp,
-    views integer not null default 0,
-    allowed_authorizations text[],
-    location text,
-    node integer not null references slaves (node),
-    deleted boolean not null default false,
-    size bigint,
-    PRIMARY KEY(key, node)
-);
-        """)
-        vs = []
-        for x in all_uploads:
-            try:
-                vs.append((
-                    x['key'],
-                    x['username'],
-                    x['time'],
-                    x['views'],
-                    x['allowed_authorizations'],
-                    f"media/{x['key']}",
-                    os.stat(f"/var/www/idevision/migration-slave/data/{x['key']}").st_size
-                ))
-                print(x['key'])
-            except:
-                pass
+        users = await conn.fetch("select * from auths;")
+        _updates = []
+        for user in users:
+            new_perms = []
+            perms = user['permissions']
+            if user['administrator']:
+                new_perms.append("administrator")
 
-        await conn.executemany("INSERT INTO uploads VALUES ($1, $2, $3, $4, $5, $6, 1, false, $7)", vs)
-        await conn.execute("drop table if exists cdn_logs;")
-        await conn.execute("""
-        create table cdn_logs (
-    image text not null,
-    node integer not null,
-    restricted boolean not null,
-    remote text not null,
-    accessed timestamp not null,
-    user_agent text not null,
-    authorized_user text,
-    response_code integer not null
-);
-        """)
+            if perms.pop("cdn"):
+                new_perms.append("cdn.upload")
+
+            new_perms += perms
+            _updates.append([user['username'], new_perms])
+
+        await conn.execute("ALTER TABLE auths DROP COLUMN administrator;")
+        await conn.executemany("UPDATE auths SET permissions = $2 WHERE username = $1", _updates)
+
 
 asyncio.run(main())
