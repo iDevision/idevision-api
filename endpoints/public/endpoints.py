@@ -8,8 +8,8 @@ import asyncpg
 import mathparser
 from aiohttp import web
 
-from utils.ratelimit import ratelimit
-from utils import ocr, utils
+from utils.handler import ratelimit
+from utils import ocr, app
 from ..cdn.cdn import upload_media_to_slaves
 
 DOCRS_RE = re.compile(r"https://docs\.rs/([^/]*)")
@@ -17,7 +17,7 @@ router = web.RouteTableDef()
 
 @router.get("/api/public/rtfs")
 @ratelimit(3, 5)
-async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
+async def do_rtfs(request: app.TypedRequest, _: asyncpg.Connection):
     fmt = request.query.get("format", "links")
     if fmt not in ("links", "source"):
         return web.Response(status=400, reason="format must be one of 'links' or 'source'")
@@ -47,7 +47,7 @@ async def do_rtfs(request: utils.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/rtfm")
 @router.get("/api/public/rtfm.sphinx")
 @ratelimit(3, 5)
-async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
+async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
     show_labels = request.query.get("show-labels", "true").lower() == "true"
     label_labels = request.query.get("label-labels", "false").lower() == "true"
 
@@ -83,16 +83,7 @@ async def do_rtfm(request: utils.TypedRequest, _: asyncpg.Connection):
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)
-async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
-    if not request.user:
-        r = "You need an API key in the Authorization header to use this endpoint. Please refer to https://idevision.net/docs for info on how to get one"
-        return web.Response(reason=r, status=401)
-
-    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
-
-    if not admin and not utils.route_allowed(perms, "public.ocr"):
-        return web.Response(reason="401 Unauthorized", status=401)
-
+async def do_ocr(request: app.TypedRequest, _: asyncpg.Connection):
     ext = request.query.get("filetype", None)
     if ext is None:
         return web.Response(reason="File-Type query arg is required.", status=400)
@@ -136,7 +127,7 @@ async def do_ocr(request: utils.TypedRequest, _: asyncpg.Connection):
 
 @router.get("/api/public/xkcd")
 @ratelimit(10, 10)
-async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
+async def xkcd(request: app.TypedRequest, conn: asyncpg.Connection):
     query = request.query.get("search", None)
     if not query:
         return web.Response(reason="Missing 'search' query parameter", status=400)
@@ -145,7 +136,7 @@ async def xkcd(request: utils.TypedRequest, conn: asyncpg.Connection):
 
 @router.put("/api/public/xkcd/tags")
 @ratelimit(1, 10)
-async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
+async def put_xkcd_tag(request: app.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="You must log in to add tags to comics", status=401)
 
@@ -170,7 +161,7 @@ async def put_xkcd_tag(request: utils.TypedRequest, conn: asyncpg.Connection):
 
 @router.post("/api/public/math")
 @ratelimit(2, 6)
-async def math(request: utils.TypedRequest, conn: asyncpg.Connection):
+async def math(request: app.TypedRequest, conn: asyncpg.Connection):
     if not request.user:
         return web.Response(reason="You must log in to use beta endpoints", status=401)
 

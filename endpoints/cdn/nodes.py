@@ -2,7 +2,7 @@ import time
 
 import asyncpg
 from aiohttp import web
-from utils import ratelimit, utils
+from utils import handler, app
 
 router = web.RouteTableDef()
 
@@ -10,8 +10,8 @@ def setup(app):
     app.add_routes(router)
 
 @router.post("/api/cdn/nodes")
-@ratelimit(20, 1, ignore_logging=True)
-async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
+@handler.ratelimit(0, 0, ignore_logging=True)
+async def post_node(request: app.TypedRequest, conn: asyncpg.Connection):
     if "Authorization" not in request.headers:
         return web.Response(status=401, text="Unauthorized")
 
@@ -80,11 +80,8 @@ async def post_node(request: utils.TypedRequest, conn: asyncpg.Connection):
         return web.json_response({"node": data['node'], "port": port, "name": data['name'], "ip": ip})
 
 @router.get("/api/cdn/nodes")
-@ratelimit(1,1)
-async def get_nodes(request: utils.TypedRequest, conn: asyncpg.Connection):
-    if not request.user or not request.user['administrator']:
-        return web.Response(status=401)
-
+@handler.ratelimit(0, 0)
+async def get_nodes(request: app.TypedRequest, conn: asyncpg.Connection):
     safe = request.query.get("safe", "").lower() == "true"
 
     slaves = request.app.slaves

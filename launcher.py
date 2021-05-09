@@ -49,26 +49,22 @@ except:
     logger.warning("Failed to use uvloop")
 
 import endpoints
-from utils import utils
-from utils.ratelimit import ratelimit
+from utils import app as _app, handler
 
 setproctitle.setproctitle("Idevision site - Master")
 uptime = datetime.datetime.utcnow()
 
-app = utils.App()
+app = _app.App()
 endpoints.setup(app)
 router = web.RouteTableDef()
 
 @router.post("/api/files")
-@ratelimit(5, 20)
-async def usercontent_upload(request: utils.TypedRequest, conn):
+@handler.ratelimit(5, 20)
+async def usercontent_upload(request: _app.TypedRequest, conn):
     if not request.user:
         return web.Response(reason="401 Unauthorized", status=401)
 
-    auth, perms, admin = request.user['username'], request.user['permissions'], request.user['administrator']
-
-    if not admin and not utils.route_allowed(perms, "files"):
-        return web.Response(reason="401 Unauthorized", status=401)
+    auth, perms, admin = request.user['username'], request.user['permissions'], "administrator" in request.user['permissions']
 
 
     if not os.path.exists(f"/var/www/idevision/containers/{auth}"):
