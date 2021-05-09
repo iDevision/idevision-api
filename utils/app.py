@@ -8,7 +8,7 @@ import asyncpg
 from aiohttp import web
 
 from utils.rtfs import Indexes
-from utils.rtfm import DocReader
+from utils.rtfm import DocReader, CargoReader
 from utils.xkcd import XKCD
 
 test = "--unittest" in sys.argv
