@@ -255,7 +255,7 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
                 headers={"Authorization": request.app.settings['slave_key']}
         ) as resp:
             if 200 <= resp.status < 300:
-                await conn.execute("UPDATE uploads SET deleted = false WHERE key = $1 and node = $2", request.match_info.get("slug"), node) # undo
+                await conn.execute("UPDATE uploads SET deleted = false WHERE key = $1 and node = $2", request.match_info.get("slug"), target['id']) # undo
 
             return web.Response(status=resp.status, reason=resp.reason)
 
