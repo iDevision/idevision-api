@@ -127,10 +127,15 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
 
     async with aiohttp.ClientSession() as session: # cant use a global session because that would limit us to one at a time
         # also i cant be asked to make a clientsession pool
+        ct = mimetypes.guess_type(f_name, False)
+        if not ct:
+            ct = "text/plain"
+        else:
+            ct = ct[0]
         async with session.post(url, data=request.content,
                                 headers={
                                     "Authorization": request.app.settings['slave_key'],
-                                    "Content-Type": mimetypes.guess_type(f_name, False),
+                                    "Content-Type": ct,
                                     "File-Name": f_name
                                 }) as resp:
             if resp.status == 600:
