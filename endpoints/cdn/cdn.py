@@ -207,14 +207,14 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
     node = request.match_info.get("node")
 
     if not request.user:
-        return web.Response(reason="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized (1000)", status=401)
 
     auth, perms = request.user['username'], request.user['permissions']
 
     manage = "cdn.manage" in perms
 
     if "cdn.upload" not in perms:
-        return web.Response(reason="401 Unauthorized", status=401)
+        return web.Response(reason="401 Unauthorized (1001)", status=401)
 
     target = None
     for n in request.app.slaves.values():
@@ -244,7 +244,7 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
         if manage:
             return web.Response(status=404)
 
-        return web.Response(status=401, reason="401 Unauthorized")
+        return web.Response(status=401, reason="401 Unauthorized (1002)")
 
     url = yarl.URL(f"http://{target['ip']}").with_port(target['port']).with_path("delete")
 
