@@ -239,7 +239,7 @@ def rs_finder(text, collection, *, key=None, lazy=True):
 
 
 class CargoReader:
-    JSSEARCH = re.compile(r"data-search-js=\"([^\"]*)\"")
+    JSSEARCH = re.compile(r"data-search-index-js=\"([^\"]*)\"")
     VERSIONSEARCH = re.compile(r"https://docs.rs/[^/]*/([\d|.]*)/[^/]*/")
     INDEXSEARCH = re.compile(r"'(.*[^\\])'")
     ITEM_TYPES = [
