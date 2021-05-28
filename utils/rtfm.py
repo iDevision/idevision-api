@@ -239,7 +239,7 @@ def rs_finder(text, collection, *, key=None, lazy=True):
 
 
 class CargoReader:
-    JSSEARCH = re.compile(r"data-search-index-js=\"([^\"]*)\"")
+    JSSEARCH = re.compile(r"data-search-index-js=\"([^\"]*)\"|<script defer=\"\" src=\"([^\"]*)\"></script>")
     VERSIONSEARCH = re.compile(r"https://docs.rs/[^/]*/([\d|.]*)/[^/]*/")
     INDEXSEARCH = re.compile(r"'(.*[^\\])'")
     ITEM_TYPES = [
@@ -308,7 +308,8 @@ class CargoReader:
         await self._ainit()
         async with self.session.get(f"https://docs.rs/{crate}") as data:
             ver = self.VERSIONSEARCH.search(str(data.url)).groups()[0] if crate != "std" else "stable"
-            pth = self.JSSEARCH.search(await data.text()).groups()[0].replace("../", "")
+            pth = self.JSSEARCH.search(await data.text()).groups()
+            pth = (pth[0] or pth[1]).replace("../", "")
 
         if crate == "std":
             loc = f"https://doc.rust-lang.org/stable/"
