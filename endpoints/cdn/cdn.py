@@ -84,9 +84,9 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
         return web.Response(status=400, reason="Bad request. Missing a MIME type or 'file-name' header.")
 
     if "content-type" in request.headers:
-        name = "file." + mimetypes.guess_extension(request.headers['content-type'].split(";")[0].strip())
+        f_name = "file." + mimetypes.guess_extension(request.headers['content-type'].split(";")[0].strip())
     else:
-        name = request.headers['file-name']
+        f_name = request.headers['file-name']
 
     if target and "cdn.manage" in request.user['permissions']:
         name: str = request.query.get("name", None)
@@ -130,8 +130,8 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
         async with session.post(url, data=request.content,
                                 headers={
                                     "Authorization": request.app.settings['slave_key'],
-                                    "Content-Type": mimetypes.guess_type(name, False),
-                                    "File-Name": name
+                                    "Content-Type": mimetypes.guess_type(f_name, False),
+                                    "File-Name": f_name
                                 }) as resp:
             if resp.status == 600:
                 return web.Response(status=400, reason=await resp.text())
