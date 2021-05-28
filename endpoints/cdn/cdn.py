@@ -3,6 +3,7 @@ import datetime
 import aiohttp
 import itertools
 import time
+import mimetypes
 import json
 
 import asyncpg
@@ -79,6 +80,14 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
     allowed_auths = request.query.getall("authorized", None)
     target: str = request.query.get("node", None)
 
+    if "content-type" not in request.headers and "file-name" not in request.headers:
+        return web.Response(status=400, reason="Bad request. Missing a MIME type or 'file-name' header.")
+
+    if "content-type" in request.headers:
+        name = "file." + mimetypes.guess_extension(request.headers['content-type'].split(";")[0].strip())
+    else:
+        name = request.headers['file-name']
+
     if target and "cdn.manage" in request.user['permissions']:
         name: str = request.query.get("name", None)
 
@@ -121,8 +130,8 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
         async with session.post(url, data=request.content,
                                 headers={
                                     "Authorization": request.app.settings['slave_key'],
-                                    "Content-Type": request.headers.get("Content-Type"),
-                                    "File-Name": request.headers.get("File-Name", "upload.jpg")
+                                    "Content-Type": mimetypes.guess_type(name, False),
+                                    "File-Name": name
                                 }) as resp:
             if resp.status == 600:
                 return web.Response(status=400, reason=await resp.text())
@@ -206,6 +215,7 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
     for n in request.app.slaves.values():
         if node == n['name']:
             target = n
+            break
 
     if target is None:
         return web.Response(status=400, reason=f"Node '{node}' is unavailable or does not exist")
@@ -239,6 +249,9 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
                 data=request.match_info.get("slug"),
                 headers={"Authorization": request.app.settings['slave_key']}
         ) as resp:
+            if 200 <= resp.status < 300:
+                await conn.execute("UPDATE uploads SET deleted = false WHERE key = $1 and node = $2", request.match_info.get("slug"), node) # undo
+
             return web.Response(status=resp.status, reason=resp.reason)
 
 @router.post("/api/cdn/purge")
