@@ -235,7 +235,7 @@ async def delete_image(request: app.TypedRequest, conn: asyncpg.Connection):
     else:
         coro = conn.fetchrow(
             "UPDATE uploads SET deleted = true WHERE key = $1 AND node = $2 AND username = $3 RETURNING *;",
-            request.match_info.get("image"),
+            request.match_info.get("slug"),
             target['id'],
             auth
         )
