@@ -286,7 +286,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 {
     "upload_count": 1234,
     "uploaded_today": 1234,
-    "last_uploaded": "https://cdn.idevision.net/node/slug"
+    "last_upload": "https://cdn.idevision.net/node/slug"
 }
 ```
 ___
