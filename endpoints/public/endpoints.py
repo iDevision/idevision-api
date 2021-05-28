@@ -8,6 +8,7 @@ import asyncpg
 import mathparser
 from aiohttp import web
 
+import utils.rtfm
 from utils.handler import ratelimit
 from utils import ocr, app
 from ..cdn.cdn import upload_media_to_slaves
@@ -47,7 +48,7 @@ async def do_rtfs(request: app.TypedRequest, _: asyncpg.Connection):
 @router.get("/api/public/rtfm")
 @router.get("/api/public/rtfm.sphinx")
 @ratelimit(3, 5)
-async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
+async def do_rtfm_sph(request: app.TypedRequest, _: asyncpg.Connection):
     show_labels = request.query.get("show-labels", "true").lower() == "true"
     label_labels = request.query.get("label-labels", "false").lower() == "true"
 
@@ -62,7 +63,7 @@ async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
 
 @router.get("/api/public/rtfm.rustdoc")
 @ratelimit(3, 5)
-async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
+async def do_rtfm_rs(request: app.TypedRequest, _: asyncpg.Connection):
     location = request.query.get("location", None)
     if location is None:
         return web.Response(status=400, reason="Missing location parameter (The URL of the documentation, or 'std')")
@@ -77,9 +78,14 @@ async def do_rtfm(request: app.TypedRequest, _: asyncpg.Connection):
 
     query = request.query.get("query", None)
     if query is None:
-        return web.Response(status=400, reason="Mising query parameter")
+        return web.Response(status=400, reason="Missing query parameter")
 
-    return await request.app.cargo_rtfm.do_rtfm(request, crate, query)
+    try:
+        return await request.app.cargo_rtfm.do_rtfm(request, crate, query)
+    except utils.rtfm.ItsFuckingDead:
+        return web.Response(status=501, reason="This crate has updated to the new rustdoc format. Please see "
+                                               "https://canary.discord.com/channels/514232441498763279/696112877387382835/847717237661237289 "
+                                               "(https://discord.gg/Bf5jMRKtD3) for an explanation on this")
 
 @router.get("/api/public/ocr")
 @ratelimit(2, 10)

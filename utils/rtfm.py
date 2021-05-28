@@ -15,10 +15,13 @@ from aiohttp import web
 import utils
 
 
-class InteralError(Exception):
+class InternalError(Exception):
     pass
 
 class BadURL(Exception):
+    pass
+
+class ItsFuckingDead(InternalError):
     pass
 
 def finder(text, collection, labels=True, *, key=None, lazy=True):
@@ -159,7 +162,7 @@ class DocReader:
                     "indexed": datetime.datetime.utcnow(),
                     "expiry": expires
                 }
-            except InteralError as e:
+            except InternalError as e:
                 return web.Response(status=500, reason=e.args[0])
             except BadURL as e:
                 return web.Response(status=400, reason=e.args[0])
@@ -183,7 +186,7 @@ class DocReader:
                 stream = SphinxObjectFileReader(await resp.read())
 
         except aiohttp.TooManyRedirects:
-            raise InteralError(f"Cannot fetch lookup table for {url}; we are being ratelimited. Try again later")
+            raise InternalError(f"Cannot fetch lookup table for {url}; we are being ratelimited. Try again later")
 
         data = self.parse_object_inv(stream, url)
         expires = await request.conn.fetchval("INSERT INTO rtfm VALUES ($1, ((now() AT TIME ZONE 'utc') + INTERVAL '3 days')) RETURNING expiry", url)
@@ -308,8 +311,11 @@ class CargoReader:
         await self._ainit()
         async with self.session.get(f"https://docs.rs/{crate}") as data:
             ver = self.VERSIONSEARCH.search(str(data.url)).groups()[0] if crate != "std" else "stable"
-            pth = self.JSSEARCH.search(await data.text()).groups()
-            pth = (pth[0] or pth[1]).replace("../", "")
+            try:
+                pth = self.JSSEARCH.search(await data.text()).groups()
+                pth = (pth[0] or pth[1]).replace("../", "")
+            except:
+                raise ItsFuckingDead()
 
         if crate == "std":
             loc = f"https://doc.rust-lang.org/stable/"
