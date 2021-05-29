@@ -268,21 +268,21 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 ```
 
 valid white/black themes are:
-- 8_bit
+- 8\_bit
 - glass
 - bases
 - classic
-- game_room
+- game\_room
 - glass
 - graffiti
 - lolz
 - neo
-- neo_wood
+- neo\_wood
 - ocean
 - wood
 
 valid board themes are:
-- 8_bit
+- 8\_bit
 - glass
 - graffiti
 - green
