@@ -1,6 +1,11 @@
-Idevision API Version 3.4
+Idevision API Version 3.5
 
 Beta documentation available at [/newdocs](https://idevision.net/newdocs)
+
+#####3.5
+- the games api is now in beta, starting with the chess api. Please ping me on discord to add this permission to your api token.
+- /api/public/rtfm.rustdoc has stopped working for certain crates. This is due to an internal change in the rustdoc format.
+  I will fix this ASAP
 
 #####3.4
 - /api/public/rtfm is now deprecated in favour of /api/public/rtfm.sphinx
@@ -241,6 +246,119 @@ Response 204
 [empty]
 
 ___
+# Games Beta
+
+## POST /api/games/chess
+* Requires an idevision API token with the `games.chess` permission group
+
+This endpoint returns a new chess board. This board should be passed to the other chess endpoints.
+
+### Ratelimit
+5 requests per 10 seconds (5/10).
+Exceeding this api by double (10/10) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Example payload
+```json
+{
+  "white-theme": "wood",
+  "black-theme": "wood",
+  "board-theme": "walnut"
+}
+```
+
+valid white/black themes are:
+- 8_bit
+- glass
+- bases
+- classic
+- game_room
+- glass
+- graffiti
+- lolz
+- neo
+- neo_wood
+- ocean
+- wood
+
+valid board themes are:
+- 8_bit
+- glass
+- graffiti
+- green
+- lolz
+- neon
+- overlay
+- parchment
+- walnut
+
+The response to this is purposefully left undocumented, as it is subject to change.
+
+## POST /api/games/chess/render
+* Requires an idevision API token with the `games.chess` permission group
+
+This endpoint renders a given board
+
+### Ratelimit
+5 requests per 10 seconds (5/10).
+Exceeding this api by double (10/10) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Example payload
+```json
+{
+  "board": ...,
+  "arrow": null
+}
+```
+board should be a board object returned from /api/games/chess or /api/games/chess/turn
+
+### Returns
+[PNG file]
+
+## POST /api/games/chess/turn
+* Requires an idevision API token with the `games.chess` permission group
+
+this endpoint takes a board, a move, and a player, and returns the updated board
+
+### Ratelimit
+5 requests per 10 seconds (5/10).
+Exceeding this api by double (10/10) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Example payload
+```json
+{
+  "board": ...,
+  "turn": "a2-a4",
+  "move-turn": "white"
+}
+```
+board should be a board object returned from /api/games/chess or /api/games/chess/turn.
+turn should be a from position - to position
+move-turn should be one of `white` or `black`.
+
+This endpoint will return an updated board object.
+
+## POST /api/games/chess/transcript
+* Requires an idevision API token with the `games.chess` permission group
+
+this endpoint takes a board, a move, and a player, and returns the updated board
+
+### Ratelimit
+5 requests per 10 seconds (5/10).
+Exceeding this api by double (10/10) will result in an automatic api ban and disabling of your account.
+Please follow the ratelimit-retry-after headers when you receive a 429 response code.
+
+### Example payload
+```json
+{
+  "board": ...
+}
+```
+this will return a plaintext list of moves, one per line.
+
+___
 # CDN Endpoints
 
 ## POST /api/cdn
@@ -367,6 +485,16 @@ Response 204
   - (public)
 - GET /
   - (public)
+
+### Games
+- POST /api/games/chess
+  - games.chess
+- POST /api/games/chess/render
+  - games.chess
+- POST /api/games/chess/turn
+  - games.chess
+- POST /api/games/chess/transcript
+  - games.chess
 
 ### CDN
 - GET /api/cdn
