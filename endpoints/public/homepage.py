@@ -12,14 +12,20 @@ def setup(app):
 @handler.ratelimit(5, 30)
 async def home_urls(request: app.TypedRequest, conn):
     auth, admin = request.user['username'], "administrator" in request.user['permissions']
-    data = await request.json()
-    user = data.get("user", auth) if admin else auth
-    displayname = data['display_name']
+    try:
+        data = await request.json()
+    except:
+        return web.Response(status=400, reason="Expected a json payload")
 
-    link1 = data['link1'], data['link1_name']
-    link2 = data['link2'], data['link2_name']
-    link3 = data['link3'], data['link3_name']
-    link4 = data['link4'], data['link4_name']
+    user = data.get("user", auth) if admin else auth
+    try:
+        displayname = data['display_name']
+        link1 = data['link1'], data['link1_name']
+        link2 = data['link2'], data['link2_name']
+        link3 = data['link3'], data['link3_name']
+        link4 = data['link4'], data['link4_name']
+    except KeyError as e:
+        return web.Response(status=400, reason=f"Missing key '{e.args[0]}' in the request payload")
 
     await conn.execute("""INSERT INTO homepages VALUES ($1, $10, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (username) DO UPDATE SET 
