@@ -88,6 +88,7 @@ class DocReader:
         self._rtfm_cache = {}
         self.session = aiohttp.ClientSession(headers={"User-Agent": "Idevision.net Documentation Reader https://idevision.net/docs"})
         self.db = app.db
+        self.lock = asyncio.Lock()
         app.loop.create_task(self.offload_unused_cache())
 
     async def offload_unused_cache(self):
@@ -96,9 +97,10 @@ class DocReader:
             await self.db.execute("DELETE FROM rtfm CASCADE WHERE expiry <= (now() at time zone 'utc')")
 
             now = datetime.datetime.utcnow()
-            for key, i in self.usage.items():
-                if (now - i).total_seconds() >= 1200 and key in self._rtfm_cache:
-                    del self._rtfm_cache[key]
+            async with self.lock:
+                for key, i in self.usage.items():
+                    if (now - i).total_seconds() >= 1200 and key in self._rtfm_cache:
+                        del self._rtfm_cache[key]
 
     def parse_object_inv(self, stream, url) -> dict:
         # key: (URL, label)
@@ -200,12 +202,25 @@ class DocReader:
         self.usage[url] = datetime.datetime.utcnow()
 
         if url not in self._rtfm_cache:
-            try:
-                await self.build_rtfm_lookup_table(request, url)
-            except RuntimeError as e:
-                return web.Response(status=500, reason=e.args[0])
+            async with self.lock:
+                try:
+                    await self.build_rtfm_lookup_table(request, url)
+                except RuntimeError as e:
+                    return web.Response(status=500, reason=e.args[0])
 
-        cache = list(self._rtfm_cache[url]['index'].items())
+        try:
+            cache = list(self._rtfm_cache[url]['index'].items())
+        except KeyError:
+            async with self.lock:
+                try:
+                    await self.build_rtfm_lookup_table(request, url)
+                except RuntimeError as e:
+                    return web.Response(status=500, reason=e.args[0])
+
+            try:
+                cache = list(self._rtfm_cache[url]['index'].items())
+            except KeyError:
+                raise RuntimeError("Cache pull fallback failed")
 
         matches = finder(obj, cache, labels, key=lambda t: t[0], lazy=False)[:8]
         end = time.perf_counter()
