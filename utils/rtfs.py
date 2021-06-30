@@ -68,7 +68,8 @@ class Index:
             await asyncio.sleep(0)
             if type(b) is ast.Assign:
                 t0 = b.targets[0]
-                if type(t0) is ast.Attribute and _get_attr_name(t0) == fn.args.args[0].arg:
+                fn_args = [*fn.args.posonlyargs, *fn.args.args, *fn.args.kwonlyargs] # got screwed over by posonly args
+                if type(t0) is ast.Attribute and _get_attr_name(t0) == fn_args[0].arg:
                     name = clsname + "." + t0.attr
                     if name not in nodes:
                         n = Node(
