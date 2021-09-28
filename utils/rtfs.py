@@ -3,6 +3,7 @@ import asyncio
 import difflib
 import configparser
 import os
+import subprocess
 import time
 import logging
 import re
@@ -43,6 +44,12 @@ class Index:
         self.repo_url = repo_url.strip("/")
         self.version = version
 
+        if not os.path.exists(self.repo_path):
+            subprocess.run(["git", "clone", self.repo_url, self.repo_path])
+
+            if branch:
+                subprocess.run(["/bin/bash", "-c", f"cd {self.repo_path} && git checkout {branch}"])
+
         if not branch:
             if not os.path.exists(os.path.join(repo_path, ".git")):
                 raise ValueError("not a git repo, no branch")
@@ -58,7 +65,6 @@ class Index:
 
                 branch = c.get('remote "origin"', "fetch").split("/")[-1]
 
-        self.branch = branch
         self.nodes: Dict[str, Node] = {}
 
     async def index_class_function(self, nodes: dict, cls: ast.ClassDef, src: List[str], fn: Union[ast.FunctionDef, ast.AsyncFunctionDef]):
@@ -187,7 +193,7 @@ class Indexes:
         "twitchio": Index("repos/TwitchIO", "twitchio", "https://github.com/TwitchIO/TwitchIO/"),
         "wavelink": Index("repos/Wavelink", "wavelink", "https://github.com/PythonistaGuild/Wavelink/"),
         "aiohttp": Index("repos/aiohttp", "aiohttp", "https://github.com/aio-libs/aiohttp/"),
-        "enhanced-discord.py": Index("repos/enhanced-discord.py", "https://github.com/Idevision/Enhanced-discord.py")
+        "enhanced-discord.py": Index("repos/enhanced-discord.py", "discord", "https://github.com/Idevision/Enhanced-discord.py", branch="2.0")
     }
 
     def __init__(self):
