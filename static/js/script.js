@@ -10,8 +10,8 @@ const postLoad = () => {
     const updateTime = () => {
         // SECTION: Clock
         let now = new Date();
-        let times = new Array(now.getHours(), now.getMinutes(), now.getSeconds());
-        let newTimes = new Array();
+        let times = [now.getHours(), now.getMinutes(), now.getSeconds()];
+        let newTimes = [];
         times.forEach(time => {newTimes.push(String(time).padStart(2, '0'))})
         clockEle.innerHTML = newTimes.join(':');
 
@@ -29,7 +29,7 @@ const postLoad = () => {
     }
 
     const delegateSubmission = (event) => {
-        if (event.keyCode == 13) {
+        if (event.keyCode === 13) {
             transferToDDG();
         }
     }
