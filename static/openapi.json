@@ -311,7 +311,7 @@
                             "title": "Library",
                             "type": "string",
                             "example": "discord.py",
-                            "description": "Which library to search. Currently available: discord.py, twitchio, wavelink, aiohttp"
+                            "description": "Which library to search. Currently available: discord.py, discord.py-2, enhanced-discord.py, twitchio, wavelink, aiohttp"
                         },
                         "in": "query"
                     }

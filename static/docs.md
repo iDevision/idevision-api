@@ -1,6 +1,9 @@
-Idevision API Version 3.5
+Idevision API Version 3.6
 
 Beta documentation available at [/newdocs](https://idevision.net/newdocs)
+
+#####3.6
+- added enhanced-discord.py to the rtfs list
 
 #####3.5
 - the games api is now in beta, starting with the chess api. Please ping me on discord to add this permission to your api token.
@@ -50,6 +53,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 - discord.py
 - discord.py-2
 - aiohttp
+- enhanced-discord.py
 
 ### Required Query parameters
 (These are not strictly required, but are required to preform a search)
