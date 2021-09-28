@@ -65,6 +65,7 @@ class Index:
 
                 branch = c.get('remote "origin"', "fetch").split("/")[-1]
 
+        self.branch = branch
         self.nodes: Dict[str, Node] = {}
 
     async def index_class_function(self, nodes: dict, cls: ast.ClassDef, src: List[str], fn: Union[ast.FunctionDef, ast.AsyncFunctionDef]):
