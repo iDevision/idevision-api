@@ -186,7 +186,8 @@ class Indexes:
         "discord.py": Index("repos/discord.py", "discord", "https://github.com/Rapptz/discord.py/"),
         "twitchio": Index("repos/TwitchIO", "twitchio", "https://github.com/TwitchIO/TwitchIO/"),
         "wavelink": Index("repos/Wavelink", "wavelink", "https://github.com/PythonistaGuild/Wavelink/"),
-        "aiohttp": Index("repos/aiohttp", "aiohttp", "https://github.com/aio-libs/aiohttp/")
+        "aiohttp": Index("repos/aiohttp", "aiohttp", "https://github.com/aio-libs/aiohttp/"),
+        "enhanced-discord.py": Index("repos/enhanced-discord.py", "https://github.com/Idevision/Enhanced-discord.py")
     }
 
     def __init__(self):
