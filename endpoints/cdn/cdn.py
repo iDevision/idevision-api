@@ -139,9 +139,9 @@ async def post_media(request: app.TypedRequest, conn: asyncpg.Connection):
                                     "File-Name": f_name
                                 }) as resp:
             if resp.status == 600:
-                return web.Response(status=400, reason=await resp.text())
+                return web.Response(status=400, reason=f"child node error: {await resp.text()}")
             elif 100 >= resp.status >= 300:
-                return web.Response(status=500, reason=await resp.text())
+                return web.Response(status=500, reason=f"child node error: {await resp.text()}")
             else:
                 data = await resp.text()
                 data = json.loads(data)
