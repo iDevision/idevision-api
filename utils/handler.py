@@ -47,6 +47,10 @@ _DEFAULT_DICT = {
     "permissions": []
 }
 
+class BannedResponse(web.Response):
+    def __init__(self, reason):
+        super().__init__(reason=reason, text=reason, status=403)
+
 
 class Handler:
     __slots__ = "rate", "per", "ignore_perm", "cb", "map", "autoban", "auth_map", "auth_autoban", "ignore_logging"
@@ -76,14 +80,17 @@ class Handler:
         async with request.app.db.acquire() as conn:
             request.conn = conn
             resp, login, did_ban = await self.do_call(request, conn)
-            if not self.ignore_logging and (did_ban or resp.status != 403):
+            if not self.ignore_logging:
+                if isinstance(resp, BannedResponse) and not did_ban:
+                    return resp
+
                 await conn.execute(
                     "INSERT INTO logs VALUES ($1, (now() at time zone 'utc'), $2, $3, $4, $5)",
                     request.headers.get("X-Forwarded-For") or request.remote,
                     request.headers.get("User-Agent", "!!Not given!!"),
                     request.path,
                     login,
-                    403 if did_ban else resp.status
+                    resp.status
                 )
             return resp
 
@@ -94,7 +101,7 @@ class Handler:
         data = dict(data) if data else _DEFAULT_DICT.copy()
 
         if data['reason']:
-            return web.Response(status=403, reason=data['reason']), None, False
+            return BannedResponse(reason=data['reason']), None, False
 
         _auth = request.headers.get("Authorization", None)
         _d = await conn.fetchrow("SELECT * FROM auths WHERE auth_key = $1 AND auth_key IS NOT NULL", _auth)
@@ -107,7 +114,7 @@ class Handler:
         data.update(_d)
 
         if data['active'] is False: # nullable
-            return web.Response(status=403, reason="Account is disabled"), None, False
+            return BannedResponse(reason="Account is disabled"), None, False
 
         authorized = data['active']
         bucket = d = None
@@ -135,7 +142,7 @@ class Handler:
                     await conn.execute(
                         "INSERT INTO bans (ip, user_agent, reason) VALUES ($1, $2, 'Auto-ban from api spam') ON CONFLICT DO NOTHING;",
                         ip, request.headers.get("user-agent"))
-                    return web.Response(status=403, reason="Auto-ban from api spam"), None, True
+                    return BannedResponse(reason="Auto-ban from api spam"), None, True
 
                 d, bucket = low_map.update_rate_limit(request)
 

@@ -62,7 +62,7 @@ async def apply(request: app.TypedRequest, conn: asyncpg.Connection):
 
     try:
         declined = await conn.fetchrow("SELECT decline_reason, auths.discord_id AS exists FROM applications INNER JOIN auths ON auths.discord_id = $1 WHERE userid = $1", data['userid'])
-        if declined is not None and declined['decline_reason']:
+        if declined is not None and declined['decline_reason'].strip():
             return web.Response(reason=f"Your application has been declined for the following reason: {declined['decline_reason']}", status=403)
 
         elif declined is not None and declined['exists']:
