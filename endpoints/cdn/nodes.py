@@ -41,35 +41,38 @@ async def post_node(request: app.TypedRequest, conn: asyncpg.Connection):
             if d:
                 request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
                 return web.json_response({"node": d['node'], "port": port, "ip": ip, "name": d['name']}, status=200)
+        try:
+            if name is not None:
+                query = """
+                INSERT INTO
+                slaves (name, ip, port)
+                VALUES
+                ($1, $2, $3)
+                RETURNING node, name
+                """
+                d = await conn.fetchrow(query, name, ip, port)
+            else:
+                query = """
+                INSERT INTO
+                slaves (name, ip, port)
+                VALUES
+                (
+                    'node-' || ((SELECT COUNT(*) FROM slaves)+1),
+                    $1,
+                    $2
+                )
+                RETURNING node, name
+                """
+                try:
+                    d = await conn.fetchrow(query, ip, port)
+                except asyncpg.UniqueViolationError:
+                    return web.Response(status=400, text="Node Exists.")
 
-        if name is not None:
-            query = """
-            INSERT INTO
-            slaves (name, ip, port)
-            VALUES
-            ($1, $2, $3)
-            RETURNING node, name
-            """
-            d = await conn.fetchrow(query, name, ip, port)
-        else:
-            query = """
-            INSERT INTO
-            slaves (name, ip, port)
-            VALUES
-            (
-                'node-' || ((SELECT COUNT(*) FROM slaves)+1),
-                $1,
-                $2
-            )
-            RETURNING node, name
-            """
-            try:
-                d = await conn.fetchrow(query, ip, port)
-            except asyncpg.UniqueViolationError:
-                return web.Response(status=400, text="Node Exists.")
-
-        request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
-        return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
+            request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
+            return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
+        except Exception:
+            print(f"Unable to make new node for {name=} {ip=} {port=}")
+            return web.Response(status=500, reason="An error occured while making a new slave.")
 
     else:
         data = await conn.fetchrow("SELECT * FROM slaves WHERE port = $1 AND node = $2 AND ip = $3", port, node, ip)
