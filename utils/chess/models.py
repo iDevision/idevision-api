@@ -209,6 +209,10 @@ class Board:
             target = self.pieces[groups[1][0]][groups[1][1]-1]
             self.pieces[groups[1][0]][groups[1][1]-1] = piece
             piece.position = groups[1][0], groups[1][1]-1
+
+            if piece.position[1] in {0, 7} and piece.name == "pawn":
+                piece.name = "queen"
+
             trs = f"{self.turn}{reverse_index[piece.name]}{groups[0][0]}{groups[0][1]}{groups[1][0]}{groups[1][1]}"
             if target:
                 trs += f"{reverse_index[target.name]}{int(target.white)}"
@@ -291,7 +295,7 @@ class Board:
                 return not any(sl)
             else:
                 if y0 > y1:
-                    sl = self.pieces[x0][y1-2:y0-1]
+                    sl = self.pieces[x0][y1:y0-1]
                 else:
                     sl = self.pieces[x0][y0:y1-1]
 
