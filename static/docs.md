@@ -334,7 +334,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 ```json
 {
   "board": ...,
-  "turn": "a2-a4",
+  "move": "a2-a4",
   "move-turn": "white"
 }
 ```
