@@ -305,6 +305,9 @@ class Board:
             while ny != y1-1:
                 nx += modx
                 ny += mody
+                if nx < 0 or ny < 0:
+                    return False
+
                 targets.append(self.pieces[string.ascii_lowercase[nx]][ny])
 
             if idx0 > idx1:
