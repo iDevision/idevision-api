@@ -263,7 +263,7 @@ class Board:
 
         piece = self.pieces[x0][y0-1]
         if piece is None:
-            raise ValueError(f"No piece on {from_}")
+            raise BadMove(f"No piece on {from_}")
 
         target = self.pieces[x1][y1-1]
         if target is not None and target.white == piece.white and piece.name != "king" and target.name != "rook":
