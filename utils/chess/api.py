@@ -34,7 +34,10 @@ async def do_move(request: web.Request):
     except BoardValidationError as e:
         return web.Response(status=400, reason=e.args[0])
 
-    move = data['move']
+    move = str(data['move'])
+    if str(data["move-turn"]).lower() not in {"white", "black"}:
+        return web.json_response({"board": board.to_dict(), "error": "Expected move-turn to be 'white' or 'black'"}, status=417, reason="Expectation Failed")
+
     turn = data['move-turn'].lower() == "white"
     data = {}
     try:

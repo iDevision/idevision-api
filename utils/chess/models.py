@@ -170,12 +170,12 @@ class Board:
             "castling": "".join(str(x) for x in self.castle)
         }
 
-    def make_move(self, move: str, white: bool):
-        if white is not None:
-            if white and not self.turn:
-                raise NotYourMove("white")
-            elif not white and self.turn:
-                raise NotYourMove("black")
+    def make_move(self, move: str, turn: str):
+        if turn is not None:
+            if turn == "black" and not self.turn:
+                raise NotYourMove("It is white's turn, not black's")
+            elif turn == "white" and self.turn:
+                raise NotYourMove("It is black's turn, not white's")
 
         match = MOVERE.match(move)
         if not match:
@@ -183,6 +183,9 @@ class Board:
 
         groups = self._get_groups(*match.groups())
         resp = self.validate_movement(*match.groups(), *groups[0], *groups[1], is_moving=True)
+        if not resp:
+            raise BadMove("This move is illegal")
+
         target = None
         if resp:
             piece = self.pieces[groups[0][0]][groups[0][1]-1]

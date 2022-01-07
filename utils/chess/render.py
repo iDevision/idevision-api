@@ -1,6 +1,8 @@
 import io
-import os
+import string
 from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+import cv2
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -40,7 +42,12 @@ def draw(board: "models.Board", arrow: Optional[str]=None) -> io.BytesIO:
         drew_nums = True
 
     if arrow is not None:
-        pass
+        array = np.array(base)
+        na = cv2.arrowedLine(array,
+                             ((string.ascii_lowercase.find(arrow[0][0])*150) + 75, 1200-((int(arrow[0][1])*150) - 75)),
+                             ((string.ascii_lowercase.find(arrow[1][0])*150) + 75, 1200-((int(arrow[1][1])*150) - 75)),
+                             (0, 0, 0), 8)
+        base = Image.fromarray(na, "RGBA")
 
     b = io.BytesIO()
     base.save(b, format="png")

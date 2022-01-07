@@ -7,4 +7,6 @@ markdown2
 setproctitle
 sly
 discord.py
+numpy
+opencv-python
 git+https://github.com/iamtomahawkx/math-parser.git
