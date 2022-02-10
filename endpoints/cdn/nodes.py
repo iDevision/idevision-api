@@ -1,4 +1,5 @@
 import time
+import traceback
 
 import asyncpg
 from aiohttp import web
@@ -70,7 +71,8 @@ async def post_node(request: app.TypedRequest, conn: asyncpg.Connection):
 
             request.app.slaves[d['node']] = {"ip": ip, "port": port, "name": d['name'], "id": d['node'], "signin": time.time()}
             return web.json_response({"node": d['node'], "port": port, "name": d['name'], "ip": ip}, status=201) # we've made a new slave
-        except Exception:
+        except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__)
             print(f"Unable to make new node for {name=} {ip=} {port=}")
             return web.Response(status=500, reason="An error occured while making a new slave.")
 
