@@ -2,6 +2,7 @@ import pathlib
 import time
 import uuid
 import os
+import subprocess
 import re
 
 import asyncpg
@@ -230,4 +231,35 @@ async def math(request: app.TypedRequest, conn: asyncpg.Connection):
         "lex_time": lex_time,
         "parse_time": parse_time,
         "evaluation_time": eval_time
+    })
+
+@router.put("/api/public/rtfs.reload")
+async def reload_rtfs(request: app.TypedRequest, _) -> web.Response:
+    perms, admin = request.user['permissions'], "administrator" in request.user['permissions']
+
+    if not admin and "public.rtfs.reload" not in perms:
+        return web.Response(reason="You need the public.rtfs.reload permission to use this endpoint", status=401)
+
+    dirs = os.listdir("repos")
+    success = []
+    fail = []
+    from utils.rtfs import Indexes
+
+    indexer = Indexes()
+
+    for d in dirs:
+        try:
+            subprocess.run(["/bin/bash", "-c", f"cd repos/{d} && git pull"])
+        except:
+            fail.append(d)
+        else:
+            success.append(d)
+
+    await indexer._do_index()
+    request.app.rtfs = indexer
+
+    return web.json_response({
+        "success": success,
+        "fail": fail,
+        "commits": {name: value.commit for name, value in indexer.index}
     })

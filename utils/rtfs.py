@@ -66,6 +66,12 @@ class Index:
                 branch = c.get('remote "origin"', "fetch").split("/")[-1]
 
         self.branch = branch
+        try:
+            with open(self.repo_path + "/.git/refs/heads/" + branch) as f:
+                self.commit = f.read()
+        except:
+            self.commit = None
+
         self.nodes: Dict[str, Node] = {}
 
     async def index_class_function(self, nodes: dict, cls: ast.ClassDef, src: List[str], fn: Union[ast.FunctionDef, ast.AsyncFunctionDef]):
@@ -198,7 +204,7 @@ class Indexes:
     }
 
     def __init__(self):
-        self.index = {}
+        self.index: Dict[str, Index] = {}
         self._is_indexed = False
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._do_index())
@@ -229,7 +235,8 @@ class Indexes:
         end = time.monotonic() - start
         return web.json_response({
             "nodes": {x.name: (x.url if not as_text else x.source) for x in resp},
-            "query_time": end
+            "query_time": end,
+            "commit": self.index[lib].commit
         })
 
     async def _do_index(self, *_):
