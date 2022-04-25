@@ -234,6 +234,7 @@ async def math(request: app.TypedRequest, conn: asyncpg.Connection):
     })
 
 @router.put("/api/public/rtfs.reload")
+@ratelimit(0, 0, "public.rtfs.reload")
 async def reload_rtfs(request: app.TypedRequest, _) -> web.Response:
     perms, admin = request.user['permissions'], "administrator" in request.user['permissions']
 
