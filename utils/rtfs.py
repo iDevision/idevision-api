@@ -68,7 +68,7 @@ class Index:
         self.branch = branch
         try:
             with open(self.repo_path + "/.git/refs/heads/" + branch) as f:
-                self.commit = f.read()
+                self.commit = f.read().strip()
         except:
             self.commit = None
 
