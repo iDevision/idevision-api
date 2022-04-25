@@ -262,5 +262,5 @@ async def reload_rtfs(request: app.TypedRequest, _) -> web.Response:
     return web.json_response({
         "success": success,
         "fail": fail,
-        "commits": {name: value.commit for name, value in indexer.index}
+        "commits": {name: value.commit for name, value in indexer.index.items()}
     })
