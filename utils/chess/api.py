@@ -1,3 +1,5 @@
+import json
+
 from aiohttp import web
 
 from .models import Board, BoardValidationError, BadMove
@@ -25,7 +27,11 @@ async def new_chess(request: web.Request):
 
 @route.post("/chess/turn")
 async def do_move(request: web.Request):
-    data = await request.json()
+    try:
+        data = await request.json()
+    except json.JSONDecodeError:
+        return web.Response(status=400, reason="Missing or badly formed json")
+
     try:
         if not all(x in data for x in ("move", "move-turn", "board")):
             raise BoardValidationError("Expected keys 'move', 'move-turn', and 'board' in body")
@@ -57,9 +63,11 @@ async def do_move(request: web.Request):
 
 @route.post("/chess/render")
 async def render(request: web.Request):
-    data = await request.json()
     try:
+        data = await request.json()
         board = Board.from_dict(data['board'])
+    except json.JSONDecodeError:
+        return web.Response(status=400, reason="Missing or badly formed json")
     except KeyError:
         return web.Response(status=400, reason="Missing value for 'board'")
     except BoardValidationError as e:
@@ -70,9 +78,11 @@ async def render(request: web.Request):
 
 @route.post("/chess/transcript")
 async def transcript(request: web.Request):
-    data = await request.json()
     try:
+        data = await request.json()
         board = Board.from_dict(data['board'])
+    except json.JSONDecodeError:
+        return web.Response(status=400, reason="Missing or badly formed json")
     except KeyError:
         return web.Response(status=400, reason="Missing value for 'board'")
     except BoardValidationError as e:
