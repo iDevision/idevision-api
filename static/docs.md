@@ -273,7 +273,6 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 
 valid white/black themes are:
 - 8\_bit
-- glass
 - bases
 - classic
 - game\_room
@@ -296,7 +295,7 @@ valid board themes are:
 - parchment
 - walnut
 
-The response to this is purposefully left undocumented, as it is subject to change.
+This returns a `board` object, which is purposefully undocumented, as it is subject to change
 
 ## POST /api/games/chess/render
 * Requires an idevision API token with the `games.chess` permission group
@@ -311,11 +310,12 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 ### Example payload
 ```json
 {
-  "board": ...,
+  "board": {...},
   "arrow": null
 }
 ```
-board should be a board object returned from /api/games/chess or /api/games/chess/turn
+board should be a board object returned from /api/games/chess or /api/games/chess/turn.
+Arrow is an optional value, if passed, it should be the `arrow` value returned from the /api/games/chess/turn endpoint
 
 ### Returns
 [PNG file]
@@ -333,7 +333,7 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
 ### Example payload
 ```json
 {
-  "board": ...,
+  "board": {...},
   "move": "a2-a4",
   "move-turn": "white"
 }
@@ -342,12 +342,19 @@ board should be a board object returned from /api/games/chess or /api/games/ches
 turn should be a from position - to position
 move-turn should be one of `white` or `black`.
 
-This endpoint will return an updated board object.
+### Returns
+```json
+{
+  "board": {...},
+  "arrow": "string"
+}
+```
+this payload can be passed directly to /api/games/chess/render
 
 ## POST /api/games/chess/transcript
 * Requires an idevision API token with the `games.chess` permission group
 
-this endpoint takes a board, a move, and a player, and returns the updated board
+This endpoint takes a board object, and returns a human-readable transcript of the game
 
 ### Ratelimit
 5 requests per 10 seconds (5/10).
@@ -360,7 +367,9 @@ Please follow the ratelimit-retry-after headers when you receive a 429 response 
   "board": ...
 }
 ```
-this will return a plaintext list of moves, one per line.
+
+### Returns
+A plaintext list of moves, one per line
 
 ___
 # CDN Endpoints

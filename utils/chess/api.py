@@ -31,6 +31,8 @@ async def do_move(request: web.Request):
             raise BoardValidationError("Expected keys 'move', 'move-turn', and 'board' in body")
 
         board = Board.from_dict(data['board'])
+    except KeyError:
+        return web.Response(status=400, reason="Missing value for 'board'")
     except BoardValidationError as e:
         return web.Response(status=400, reason=e.args[0])
 
@@ -58,6 +60,8 @@ async def render(request: web.Request):
     data = await request.json()
     try:
         board = Board.from_dict(data['board'])
+    except KeyError:
+        return web.Response(status=400, reason="Missing value for 'board'")
     except BoardValidationError as e:
         return web.Response(status=400, reason=e.args[0])
 
@@ -69,6 +73,8 @@ async def transcript(request: web.Request):
     data = await request.json()
     try:
         board = Board.from_dict(data['board'])
+    except KeyError:
+        return web.Response(status=400, reason="Missing value for 'board'")
     except BoardValidationError as e:
         return web.Response(status=400, reason=e.args[0])
 
