@@ -12,24 +12,27 @@ THEMES = os.listdir(THEMES_DIRS)
 BOARDS = [x.replace(".png", "") for x in os.listdir(BOARDS_DIR)]
 MOVERE = re.compile(r"([a-hA-H][1-8])\s*[-~/|=>]*\s*([a-hA-H][1-8])")
 
-
 class BoardValidationError(Exception):
     pass
 
-
 class BadMove(Exception):
     pass
-
 
 class NotYourMove(BadMove):
     pass
 
 
-index = {0: "pawn", 1: "rook", 2: "knight", 3: "bishop", 4: "queen", 5: "king"}
+index = {
+    0: "pawn",
+    1: "rook",
+    2: "knight",
+    3: "bishop",
+    4: "queen",
+    5: "king"
+}
 reverse_index = {v: k for k, v in index.items()}
 
 ROWS = list("abcdefgh")
-
 
 class Piece:
     __slots__ = "name", "position", "white"
@@ -40,9 +43,7 @@ class Piece:
         self.white = white
 
     def get_asset(self, theme: str) -> pathlib.Path:
-        return pathlib.Path(
-            THEMES_DIRS, theme, f"{'w_' if self.white else 'b_'}{self.name}.png"
-        )
+        return pathlib.Path(THEMES_DIRS, theme, f"{'w_' if self.white else 'b_'}{self.name}.png")
 
     @property
     def type(self):
@@ -64,26 +65,10 @@ class Piece:
 
 
 class Board:
-    __slots__ = (
-        "pieces",
-        "turn",
-        "transcript",
-        "white_theme",
-        "black_theme",
-        "board_theme",
-        "castle",
-    )
+    __slots__ = ("pieces", "turn", "transcript", "white_theme", "black_theme", "board_theme", "castle")
 
-    def __init__(
-        self,
-        pieces: Dict[str, List[Piece]],
-        turn: int,
-        transcript: Optional[List[str]],
-        castle: List[int],
-        white_theme: str,
-        black_theme: str,
-        board_theme: str,
-    ):
+    def __init__(self, pieces: Dict[str, List[Piece]], turn: int, transcript: Optional[List[str]],
+                 castle: List[int], white_theme: str, black_theme: str, board_theme: str):
         self.pieces = pieces
         self.turn = turn
         self.transcript = transcript or []
@@ -96,12 +81,7 @@ class Board:
         return pathlib.Path(BOARDS_DIR, f"{self.board_theme}.png")
 
     @classmethod
-    def new(
-        cls,
-        white_theme: str = "wood",
-        black_theme: str = "wood",
-        board_theme: str = "walnut",
-    ):
+    def new(cls, white_theme: str = "wood", black_theme: str = "wood", board_theme: str = "walnut"):
         newboard = [
             "1a80", "2b80", "3c80", "4d80", "5e80", "3f80", "2g80", "1h80",
             "0a70", "0b70", "0c70", "0d70", "0e70", "0f70", "0g70", "0h70",
@@ -109,17 +89,11 @@ class Board:
             "1a11", "2b11", "3c11", "4d11", "5e11", "3f11", "2g11", "1h11",
         ]
         if white_theme not in THEMES:
-            raise BoardValidationError(
-                f"{white_theme} is not a valid theme (white-theme). Valid themes are: {', '.join(THEMES)}"
-            )
+            raise BoardValidationError(f"{white_theme} is not a valid theme (white-theme). Valid themes are: {', '.join(THEMES)}")
         if black_theme not in THEMES:
-            raise BoardValidationError(
-                f"{black_theme} is not a valid theme (black-theme). Valid themes are: {', '.join(THEMES)}"
-            )
+            raise BoardValidationError(f"{black_theme} is not a valid theme (black-theme). Valid themes are: {', '.join(THEMES)}")
         if board_theme not in BOARDS:
-            raise BoardValidationError(
-                f"{board_theme} is not a valid board (board-theme). Valid boards are {', '.join(BOARDS)}"
-            )
+            raise BoardValidationError(f"{board_theme} is not a valid board (board-theme). Valid boards are {', '.join(BOARDS)}")
 
         board = {x: [None for _ in range(1, 9)] for x in ROWS}
         for p in newboard:
@@ -151,10 +125,8 @@ class Board:
                 raise BoardValidationError(f"pieces.{n}: invalid piece")
 
             if board[p.position[0]][p.position[1]] is not None:
-                raise BoardValidationError(
-                    f"pieces.{n}: multiple pieces on space {p.position[0]}{p.position[1]} "
-                    f"(found {board[p.position[0]][p.position[1]]} and tried to put {p})"
-                )
+                raise BoardValidationError(f"pieces.{n}: multiple pieces on space {p.position[0]}{p.position[1]} "
+                                           f"(found {board[p.position[0]][p.position[1]]} and tried to put {p})")
 
             board[p.position[0]][p.position[1]] = p
 
@@ -181,28 +153,17 @@ class Board:
         except:
             raise BoardValidationError(f"castling: invalid castling string")
 
-        return cls(
-            board,
-            data.get("turn", 1),
-            transcript,
-            castling,
-            white_theme,
-            black_theme,
-            board_theme,
-        )
+        return cls(board, data.get("turn", 1), transcript, castling, white_theme, black_theme, board_theme)
 
     def to_dict(self):
         return {
-            "pieces": [
-                p.serialize() if p else None
-                for p in itertools.chain(*self.pieces.values())
-            ],
+            "pieces": [p.serialize() if p else None for p in itertools.chain(*self.pieces.values())],
             "turn": self.turn,
             "transcript": self.transcript,
             "white-theme": self.white_theme,
             "black-theme": self.black_theme,
             "board-theme": self.board_theme,
-            "castling": "".join(str(x) for x in self.castle),
+            "castling": "".join(str(x) for x in self.castle)
         }
 
     def make_move(self, move: str, turn: str):
@@ -239,12 +200,7 @@ class Board:
                 else:
                     self.castle[2] = self.castle[3] = 0
 
-            elif piece.name == "rook" and piece.position in (
-                ("a", 0),
-                ("h", 0),
-                ("a", 7),
-                ("h", 7),
-            ):
+            elif piece.name == "rook" and piece.position in ( ("a", 0), ("h", 0), ("a", 7), ("h", 7)):
                 if piece.white and piece.position == ("a", 0):
                     self.castle[0] = 0
                 elif piece.white and piece.position == ("h", 0):
@@ -272,9 +228,7 @@ class Board:
 
         return resp, target, groups
 
-    def _get_groups(
-        self, from_: str, to: str
-    ) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+    def _get_groups(self, from_: str, to: str) -> Tuple[Tuple[str, int], Tuple[str, int]]:
         x0, y0 = from_[0].lower(), int(from_[1])
         if x0 not in "abcdefgh":
             raise ValueError("unexpected movefrom column")
@@ -334,9 +288,7 @@ class Board:
 
         return decompressed
 
-    def validate_movement(
-        self, from_: str, _: str, x0: str, y0: int, x1: str, y1: int, *, is_moving=False
-    ) -> bool:
+    def validate_movement(self, from_: str, _: str, x0: str, y0: int, x1: str, y1: int, *, is_moving=False) -> bool:
         if (x0, y0) == (x1, y1):
             return False
 
@@ -345,45 +297,20 @@ class Board:
             raise BadMove(f"No piece on {from_}")
 
         target = self.pieces[x1][y1 - 1]
-        if (
-            target is not None
-            and target.white == piece.white
-            and piece.name != "king"
-            and target.name != "rook"
-        ):
+        if (target is not None and target.white == piece.white and piece.name != "king" and target.name != "rook"):
             return False
 
         if piece.name == "pawn":
             if x0 != x1:
                 if self.turn:
-                    return (
-                        y1 == y0 + 1
-                        and self.pieces[x1][y1 - 1] is not None
-                        and x1
-                        in (
-                            ROWS[ROWS.index(x0) - 1] if x0 != "a" else None,
-                            ROWS[ROWS.index(x0) + 1] if x0 != "h" else None,
-                        )
-                    )
+                    return ( y1 == y0 + 1 and self.pieces[x1][y1 - 1] is not None and x1 in ( ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None))
 
-                return (
-                    y1 == y0 - 1
-                    and self.pieces[x1][y1 - 1] is not None
-                    and x1
-                    in (
-                        ROWS[ROWS.index(x0) - 1] if x0 != "a" else None,
-                        ROWS[ROWS.index(x0) + 1] if x0 != "h" else None,
-                    )
-                )
+                return ( y1 == y0 - 1 and self.pieces[x1][y1 - 1] is not None and x1 in ( ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None, ))
 
             if self.turn:
-                return (
-                    y1 == y0 + 1 if y0 != 2 else y1 in (y0 + 1, y0 + 2)
-                ) and self.pieces[x1][y1 - 1] is None
+                return (y1 == y0 + 1 if y0 != 2 else y1 in (y0 + 1, y0 + 2)) and self.pieces[x1][y1 - 1] is None
 
-            return (
-                y1 == y0 - 1 if y0 != 7 else y1 in (y0 - 1, y0 - 2)
-            ) and self.pieces[x1][y1 - 1] is None
+            return (y1 == y0 - 1 if y0 != 7 else y1 in (y0 - 1, y0 - 2)) and self.pieces[x1][y1 - 1] is None
 
         elif piece.name == "rook":
             if x0 != x1 and y0 != y1:
@@ -392,17 +319,9 @@ class Board:
             elif x0 != x1:
                 idx0, idx1 = ROWS.index(x0) + 1, ROWS.index(x1) + 1
                 if idx0 > idx1:
-                    sl = [
-                        x[y0]
-                        for i, x in self.pieces.items()
-                        if idx0 > ROWS.index(i) + 1 > idx1
-                    ]
+                    sl = [x[y0] for i, x in self.pieces.items() if idx0 > ROWS.index(i) + 1 > idx1]
                 else:
-                    sl = [
-                        x[y0]
-                        for i, x in self.pieces.items()
-                        if idx0 < ROWS.index(i) + 1 < idx1
-                    ]
+                    sl = [x[y0] for i, x in self.pieces.items() if idx0 < ROWS.index(i) + 1 < idx1]
 
                 return not any(sl)
             else:
@@ -430,9 +349,7 @@ class Board:
                 targets.append(self.pieces[string.ascii_lowercase[nx]][ny])
 
             if idx0 > idx1:
-                return y1 in (y0 + (idx0 - idx1), y0 - (idx0 - idx1)) and not any(
-                    targets
-                )
+                return y1 in (y0 + (idx0 - idx1), y0 - (idx0 - idx1)) and not any(targets)
 
             return y1 in (y0 + (idx1 - idx0), y0 - (idx1 - idx0)) and not any(targets)
 
@@ -440,30 +357,16 @@ class Board:
             if x0 == x1 or y0 == y1:
                 return False
             return (ROWS.index(x0) - ROWS.index(x1), y0 - y1) in (
-                (-2, 1),
-                (-2, -1),
-                (-1, 2),
-                (-1, -2),
-                (2, 1),
-                (2, -1),
-                (1, 2),
-                (1, -2),
+                (-2, 1), (-2, -1), (-1, 2), (-1, -2),
+                (2, 1), (2, -1), (1, 2), (1, -2),
             )
         elif piece.name == "queen":
             if y0 == y1:
                 idx0, idx1 = ROWS.index(x0) + 1, ROWS.index(x1) + 1
                 if idx0 > idx1:
-                    sl = [
-                        x[y0]
-                        for i, x in self.pieces.items()
-                        if idx0 > ROWS.index(i) + 1 > idx1
-                    ]
+                    sl = [x[y0] for i, x in self.pieces.items() if idx0 > ROWS.index(i) + 1 > idx1]
                 else:
-                    sl = [
-                        x[y0]
-                        for i, x in self.pieces.items()
-                        if idx0 < ROWS.index(i) + 1 < idx1
-                    ]
+                    sl = [x[y0] for i, x in self.pieces.items() if idx0 < ROWS.index(i) + 1 < idx1]
                 return all(x is None for x in sl)
 
             elif x0 == x1:
@@ -483,47 +386,20 @@ class Board:
                     targets.append((string.ascii_lowercase[nx], ny))
 
                 if idx0 > idx1:
-                    return y1 in (y0 + (idx0 - idx1), y0 - (idx0 - idx1)) and not any(
-                        targets
-                    )
+                    return y1 in (y0 + (idx0 - idx1), y0 - (idx0 - idx1)) and not any(targets)
 
-                return y1 in (y0 + (idx1 - idx0), y0 - (idx1 - idx0)) and not any(
-                    targets
-                )
+                return y1 in (y0 + (idx1 - idx0), y0 - (idx1 - idx0)) and not any(targets)
 
         elif piece.name == "king":
-
             def _inner():
-                if not (
-                    (1 > (ROWS.index(x0) - ROWS.index(x1)) > -1) and (1 > y0 - y1 > -1)
-                ):
+                if not ((1 > (ROWS.index(x0) - ROWS.index(x1)) > -1) and (1 > y0 - y1 > -1)):
 
-                    if (
-                        self.pieces[x1][y1 - 1] is not None
-                        and self.pieces[x1][y1 - 1].name == "rook"
-                    ):
+                    if (self.pieces[x1][y1 - 1] is not None and self.pieces[x1][y1 - 1].name == "rook"):
                         shift = 0 if self.turn else 2
                         if x1 < x0:
-                            return (
-                                self.castle[shift] == 1
-                                and not any(
-                                    x[7 if shift else 0]
-                                    for i, x in self.pieces.items()
-                                    if i in "bcd"
-                                ),
-                                shift,
-                            )
+                            return self.castle[shift] == 1 and not any( x[7 if shift else 0] for i, x in self.pieces.items() if i in "bcd"), shift
                         elif x1 > x0:
-                            return (
-                                self.castle[shift + 1] == 1
-                                and not any(
-                                    x[7 if shift else 0]
-                                    for i, x in self.pieces.items()
-                                    if i in "fg"
-                                ),
-                                shift + 1,
-                            )
-
+                            return  self.castle[shift + 1] == 1 and not any( x[7 if shift else 0] for i, x in self.pieces.items() if i in "fg" ), shift + 1,
                         return False, None
 
                 return True, None
