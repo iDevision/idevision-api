@@ -200,7 +200,7 @@ class Board:
                 else:
                     self.castle[2] = self.castle[3] = 0
 
-            elif piece.name == "rook" and piece.position in ( ("a", 0), ("h", 0), ("a", 7), ("h", 7)):
+            elif piece.name == "rook" and piece.position in (("a", 0), ("h", 0), ("a", 7), ("h", 7)):
                 if piece.white and piece.position == ("a", 0):
                     self.castle[0] = 0
                 elif piece.white and piece.position == ("h", 0):
@@ -303,9 +303,9 @@ class Board:
         if piece.name == "pawn":
             if x0 != x1:
                 if self.turn:
-                    return ( y1 == y0 + 1 and self.pieces[x1][y1 - 1] is not None and x1 in ( ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None))
+                    return (y1 == y0 + 1 and self.pieces[x1][y1 - 1] is not None and x1 in (ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None))
 
-                return ( y1 == y0 - 1 and self.pieces[x1][y1 - 1] is not None and x1 in ( ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None, ))
+                return (y1 == y0 - 1 and self.pieces[x1][y1 - 1] is not None and x1 in (ROWS[ROWS.index(x0) - 1] if x0 != "a" else None, ROWS[ROWS.index(x0) + 1] if x0 != "h" else None,))
 
             if self.turn:
                 return (y1 == y0 + 1 if y0 != 2 else y1 in (y0 + 1, y0 + 2)) and self.pieces[x1][y1 - 1] is None
@@ -397,9 +397,9 @@ class Board:
                     if (self.pieces[x1][y1 - 1] is not None and self.pieces[x1][y1 - 1].name == "rook"):
                         shift = 0 if self.turn else 2
                         if x1 < x0:
-                            return self.castle[shift] == 1 and not any( x[7 if shift else 0] for i, x in self.pieces.items() if i in "bcd"), shift
+                            return self.castle[shift] == 1 and not any(x[7 if shift else 0] for i, x in self.pieces.items() if i in "bcd"), shift
                         elif x1 > x0:
-                            return  self.castle[shift + 1] == 1 and not any( x[7 if shift else 0] for i, x in self.pieces.items() if i in "fg" ), shift + 1,
+                            return  self.castle[shift + 1] == 1 and not any(x[7 if shift else 0] for i, x in self.pieces.items() if i in "fg"), shift + 1,
                         return False, None
 
                 return True, None
