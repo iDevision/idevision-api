@@ -1,4 +1,3 @@
-from copy import deepcopy
 import itertools
 import re
 import os
@@ -207,8 +206,6 @@ class Board:
         }
 
     def make_move(self, move: str, turn: str):
-        _ = deepcopy(self)
-
         if turn is not None:
             if turn == "black" and not self.turn:
                 raise NotYourMove("It is white's turn, not black's")
