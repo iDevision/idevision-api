@@ -122,7 +122,7 @@ class Index:
                     )
                 await self.index_class_function(nodes, cls, src, b)
 
-    async def index_file(self, _nodes: dict, fp: Union[str, PathLike], dirs: List[str]):
+    async def index_file(self, _nodes: dict, fp: Union[str, PathLike], dirs: List[str], is_utils: bool = False):
         nodes = {}
         with open(fp, encoding="utf8") as f:
             src = f.read()
@@ -153,6 +153,22 @@ class Index:
                     )
                     nodes[name] = n
 
+            elif isinstance(b, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if is_utils:
+                    name = "utils." + b.name
+                else:
+                    name = b.name
+
+                if name not in nodes:
+                    n = Node(
+                        file=fp,
+                        line=b.lineno,
+                        end_line=b.end_lineno,
+                        name=name,
+                        source="\n".join(lines[b.lineno - 1:b.end_lineno])
+                    )
+                    nodes[name] = n
+
         pth = "/".join(dirs)
         for n in nodes.values():
             n.file = pth
@@ -166,14 +182,14 @@ class Index:
         idx = os.listdir(target)
 
         for f in idx:
-            if f == "types":
+            if f in {"types", "typings", "typing"}:
                 continue
 
             if os.path.isdir(os.path.join(target, f)):
                 await self.index_directory(nodes, idx_pth, parents, f)
 
             elif f.endswith(".py"):
-                await self.index_file(nodes, os.path.join(target, f), parents+[f])
+                await self.index_file(nodes, os.path.join(target, f), parents+[f], f == "utils.py")
 
     async def index_lib(self):
         await self.index_directory(self.nodes, self.repo_path, [], self.index_folder)
